@@ -26,3 +26,4 @@ futures-util = "0.3.28"
 async-trait = "0.1.73"
 primitives = { path = "crates/primitives" }
 relay = { path = "crates/relay" }
+tower-http = { version = "0.5.2", features = ["cors"] }
