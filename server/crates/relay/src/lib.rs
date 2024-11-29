@@ -11,6 +11,7 @@ use std::sync::Arc;
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
 pub mod error;
+pub mod handlers;
 
 pub struct AppState {
     pub db_url: String,
@@ -30,6 +31,7 @@ pub async fn run_relayer_server(config: ServerConfig) -> Result<(), anyhow::Erro
 
     let app = Router::new()
         .route("/", get(|| async { "Gasless Relayer." }))
+        .route("/status", get(handlers::get_request_status))
         .layer(cors)
         .with_state(app_state);
 
