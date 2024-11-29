@@ -1,16 +1,12 @@
 //! This file discribes how multi-threadable tasks would be structured in the gasless-relayer server.
+use async_trait::async_trait;
 use futures::{future::try_join_all, Future};
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info};
-use async_trait::async_trait;
-
-
 
 pub mod monitor;
 pub mod relay;
-
-
 
 /// Core task trait implemenated by top level gasless-relayer tasks.
 #[async_trait] // to fix: the trait `Task` cannot be made into an object consider moving `run` to another trait
