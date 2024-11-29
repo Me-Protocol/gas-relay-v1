@@ -37,7 +37,6 @@ alloy = { version = "0.7.0", features = [
     "rpc-client",
     "getrandom"
 ] }
-sqlx = {version = "0.7.3", features = ["runtime-tokio", "tls-native-tls", "postgres", "macros"]}
 axum = "0.7.9"
 postgres = "0.19.7"
 tokio-postgres = {version = "0.7.10", features = ["with-chrono-0_4"]}

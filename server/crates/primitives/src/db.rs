@@ -1,5 +1,20 @@
 use crate::relay::{RequestState, RequestStatus};
 use chrono::NaiveDateTime;
+use postgres::NoTls;
+
+pub async fn create_db_instance(url: &String) -> Result<tokio_postgres::Client, anyhow::Error> {
+    let (client, connection) = tokio_postgres::connect(url.as_str(), NoTls).await?;
+
+    // The connection object performs the actual communication with the database,
+    // so spawn it off to run on its own.
+    tokio::spawn(async move {
+        if let Err(e) = connection.await {
+            eprintln!("connection error: {}", e);
+        }
+    });
+
+    Ok(client)
+}
 
 pub async fn create_request_status_table(
     client: &mut tokio_postgres::Client,

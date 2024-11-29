@@ -6,16 +6,15 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use primitives::configs::ServerConfig;
+use primitives::{configs::ServerConfig, db::create_db_instance};
 use std::{sync::Arc, time::Duration};
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
 pub mod error;
 pub mod handlers;
-use sqlx::{postgres::PgPoolOptions, PgPool};
 
 pub struct AppState {
-    pub db_pool: PgPool,
+    pub db_client: tokio_postgres::Client,
 }
 
 /// Run the relayer server
@@ -26,14 +25,9 @@ pub async fn run_relayer_server(config: ServerConfig) -> Result<(), anyhow::Erro
         .allow_methods([Method::GET, Method::POST])
         .allow_headers(Any);
 
-    let db_pool = PgPoolOptions::new()
-        .max_connections(64)
-        .acquire_timeout(Duration::from_secs(5))
-        .connect(&config.db_url.clone())
-        .await
-        .expect("can't connect to database");
+    let db_client = create_db_instance(&config.db_url).await?;
 
-    let app_state = Arc::new(AppState { db_pool });
+    let app_state = Arc::new(AppState { db_client });
 
     let app = Router::new()
         .route("/", get(|| async { "Gasless Relayer." }))
