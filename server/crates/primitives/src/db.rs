@@ -17,7 +17,7 @@ pub async fn create_db_instance(url: &String) -> Result<tokio_postgres::Client, 
 }
 
 pub async fn create_request_status_table(
-    client: &mut tokio_postgres::Client,
+    client: &tokio_postgres::Client,
 ) -> Result<(), anyhow::Error> {
     let executable = format!(
         "
@@ -30,7 +30,8 @@ pub async fn create_request_status_table(
                 transaction_hash VARCHAR NOT NULL,
                 block_number    BIGINT NOT NULL,
                 mined_at        TIMESTAMP NOT NULL,
-                gas_used        BIGINT NOT NULL
+                gas_used        BIGINT NOT NULL,
+                batch           BOOL DEFAULT FALSE NOT NULL
             )
         "
     );
@@ -40,16 +41,16 @@ pub async fn create_request_status_table(
 }
 
 pub async fn inital_insert_request_status(
-    client: &mut tokio_postgres::Client,
+    client: &tokio_postgres::Client,
     chain_id: u64,
     request_id: String,
     request_state: RequestState,
-    transaction_hash: String,
-) -> Result<(), anyhow::Error> {
+    is_batch: bool,
+) -> Result<RequestStatus, anyhow::Error> {
     let query = r#"
         INSERT INTO request_status (
-            chain_id, request_id, request_state, transaction_hash, block_number, mined_at, gas_used
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+            chain_id, request_id, request_state, block_number, mined_at, gas_used, batch
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         ON CONFLICT (request_id) DO NOTHING
     "#;
 
@@ -58,6 +59,7 @@ pub async fn inital_insert_request_status(
     let mined_at = chrono::Utc::now(); // Timestamp for mined_at
     let gas_used = 0_i64;
     let request_state: String = request_state.into();
+    let transaction_hash = "".to_string();
 
     client
         .execute(
@@ -70,20 +72,34 @@ pub async fn inital_insert_request_status(
                 &block_number,
                 &mined_at,
                 &gas_used,
+                &is_batch,
             ],
         )
         .await?;
 
-    Ok(())
+    let request_status = RequestStatus {
+        chain_id,
+        request_id,
+        request_state: request_state.into(),
+        created_at: mined_at.naive_utc(),
+        transaction_hash,
+        block_number: block_number as u64,
+        mined_at: mined_at.naive_utc(),
+        gas_used: gas_used as u64,
+        is_batch,
+    };
+
+    Ok(request_status)
 }
 
 pub async fn final_update_request_status(
-    client: &mut tokio_postgres::Client,
+    client: &tokio_postgres::Client,
     request_id: String,
     request_state: RequestState,
     block_number: u64,
     mined_at: NaiveDateTime,
     gas_used: u64,
+    transaction_hash: String,
 ) -> Result<(), anyhow::Error> {
     let query = r#"
         UPDATE request_status
@@ -91,7 +107,8 @@ pub async fn final_update_request_status(
             block_number = $2, 
             mined_at = $3, 
             gas_used = $4
-        WHERE request_id = $5
+            transaction_hash = $5
+        WHERE request_id = $6
     "#;
     let request_state: String = request_state.into();
 
@@ -103,6 +120,7 @@ pub async fn final_update_request_status(
                 &(block_number as i64),
                 &mined_at,
                 &(gas_used as i64),
+                &transaction_hash,
                 &request_id,
             ],
         )
@@ -124,7 +142,8 @@ pub async fn query_request_status_by_request_id(
             transaction_hash, 
             block_number, 
             mined_at, 
-            gas_used
+            gas_used,
+            batch
         FROM request_status
         WHERE request_id = $1
     "#;
@@ -141,6 +160,7 @@ pub async fn query_request_status_by_request_id(
             block_number: row.get::<_, i64>(5) as u64,
             mined_at: row.get(6),
             gas_used: row.get::<_, i64>(7) as u64,
+            is_batch: row.get(8),
         };
         Ok(Some(request_status))
     } else {
@@ -162,7 +182,8 @@ pub async fn query_all_request_status_paginated(
             transaction_hash, 
             block_number, 
             mined_at, 
-            gas_used
+            gas_used,
+            batch
         FROM request_status
         ORDER BY created_at DESC
         LIMIT $1 OFFSET $2
@@ -185,6 +206,7 @@ pub async fn query_all_request_status_paginated(
             block_number: row.get::<_, i64>(5) as u64,
             mined_at: row.get(6),
             gas_used: row.get::<_, i64>(7) as u64,
+            is_batch: row.get(8),
         })
         .collect();
 

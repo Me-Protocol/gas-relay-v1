@@ -5,6 +5,7 @@ use axum::{
 
 pub enum RelayServerError {
     BadDataFormat,
+    BadRequest(String),
 }
 
 impl IntoResponse for RelayServerError {
@@ -13,6 +14,7 @@ impl IntoResponse for RelayServerError {
             RelayServerError::BadDataFormat => {
                 (StatusCode::BAD_REQUEST, "Bad data format".to_string()).into_response()
             }
+            RelayServerError::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg).into_response(),
         }
     }
 }

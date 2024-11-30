@@ -12,14 +12,15 @@ pub enum RequestState {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RelayRequest {
-    from: String,
-    to: String,
-    value: u64,
-    gas: u64,
-    deadline: u64,
-    data: String,
-    nonce: u64,
-    signature: String,
+    pub chain_id: u64,
+    pub from: String,
+    pub to: String,
+    pub value: u64,
+    pub gas: u64,
+    pub deadline: u64,
+    pub data: String,
+    pub nonce: u64,
+    pub signature: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -32,6 +33,7 @@ pub struct RequestStatus {
     pub block_number: u64,
     pub mined_at: NaiveDateTime,
     pub gas_used: u64,
+    pub is_batch: bool,
 }
 
 // impl to convert a string to RequestState
