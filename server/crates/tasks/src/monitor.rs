@@ -1,8 +1,8 @@
-//! Monitor task
-
+//! Monitor task.
 use crate::Task;
 use anyhow::bail;
 use async_trait::async_trait;
+use monitor::run_monitor_task;
 use tokio::{select, try_join};
 use tokio_util::sync::CancellationToken;
 use tracing::info;
@@ -26,23 +26,27 @@ impl MonitorTask {
 #[async_trait]
 impl Task for MonitorTask {
     async fn run(mut self: Box<Self>, shutdown_token: CancellationToken) -> anyhow::Result<()> {
-        // let monitor_handle = tokio::spawn(async move {
-        //     select! {
-        //         _ = tokio::time::sleep(tokio::time::Duration::from_secs(5)) => {
-        //             info!("Monitor task completed");
-        //         }
-        //         _ = shutdown_token.cancelled() => {
-        //             info!("Shutting down monitor");
-        //         }
-        //     }
-        // });
+        let monitor_handle = tokio::spawn(async move {
+            select! {
+                monitor = run_monitor_task() => {
+                    if monitor.is_err() {
+                        info!("Monitor failed to start");
+                    }
+                    info!("Monitor task completed");
+                }
+                _ = shutdown_token.cancelled() => {
+                    info!("Shutting down monitor");
+                }
+            }
+        });
 
-        // match try_join!(monitor_handle) {
-        //     Ok(_) => {
-        //         info!("Monitor task completed");
-        //     }
-        //     Err(e) => bail!("Error running monitor: {:?}", e),
-        // }
+        match try_join!(monitor_handle) {
+            Ok(_) => {
+                info!("Monitor task completed");
+            }
+            Err(e) => bail!("Error running monitor: {:?}", e),
+        }
+
         Ok(())
     }
 }

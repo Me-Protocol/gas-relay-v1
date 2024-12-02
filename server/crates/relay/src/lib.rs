@@ -1,13 +1,11 @@
 //! This module contains the relayer axum server
-
 use axum::{
     http::Method,
-    response::{self, IntoResponse},
     routing::{get, post},
     Router,
 };
 use primitives::{configs::ServerConfig, db::create_db_instance};
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
 pub mod error;

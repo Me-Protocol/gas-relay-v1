@@ -29,7 +29,6 @@ impl Task for ServerTask {
         let server_handle = tokio::spawn(async move {
             select! {
                 server = run_relayer_server(self.config) => {
-                    // Want this indexing to halt before
                     if server.is_err() {
                         info!("Relay server failed to start");
                     }
@@ -46,6 +45,7 @@ impl Task for ServerTask {
             }
             Err(e) => bail!("Error running server: {:?}", e),
         }
+
         Ok(())
     }
 }

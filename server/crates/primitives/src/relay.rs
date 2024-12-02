@@ -1,4 +1,4 @@
-use alloy::primitives::{B256, U256};
+use alloy::primitives::B256;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
