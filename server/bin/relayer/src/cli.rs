@@ -1,9 +1,8 @@
-use primitives::{configs::RelayerConfig, db::create_db_instance};
-use tasks::relay::ServerTask;
-use tracing_subscriber::{filter::LevelFilter, util::SubscriberInitExt};
 use clap::Parser;
+use primitives::{configs::RelayerConfig, db::create_db_instance};
+use tasks::{monitor::MonitorTask, relay::ServerTask, spawn_tasks};
 use toml::from_str;
-
+use tracing_subscriber::{filter::LevelFilter, util::SubscriberInitExt};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -11,8 +10,6 @@ pub struct CliConfig {
     #[arg(short, long)]
     pub config_path: String,
 }
-
-
 
 /// Main entry point for the CLI
 ///
@@ -28,7 +25,6 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let mut db_client = create_db_instance(&config.server.db_url)
         .await
         .expect("Could not create db instance");
-    
 
     // server config
     let server_config = config.clone().server;
@@ -37,13 +33,12 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     tracing::info!("Starting Relay with config: {:?}", config.clone());
 
+    // add server task to the tasks
     let mut tasks = vec![ServerTask::new(server_config).boxed()];
+    // add monitinor task to the tasks
+    tasks.push(MonitorTask::new("".to_string()).boxed());
 
-    // for indexer_config in indexer_configs {
-    //     tasks.push(IndexerTask::new(indexer_config, config.db_url.clone()).boxed());
-    // }
-
-    // spawn_tasks(tasks, tokio::signal::ctrl_c()).await;
+    spawn_tasks(tasks, tokio::signal::ctrl_c()).await;
 
     Ok(())
 }
