@@ -1,0 +1,24 @@
+[server]
+db_url = "host=localhost user=postgres"
+# db_url ="host=xxxx.amazonaws.com port=5432 user=postgres password=xxxx dbname=postgres sslmode=disable" production-sample
+server_url = "127.0.0.1:8010"
+
+[[relaying_accounts]]
+name = "gasless-relayer-one"
+private_key = ""
+
+[[relaying_accounts]]
+name = "gasless-relayer-two"
+private_key = ""
+
+[[relaying_accounts]]
+name = "gasless-relayer-three"
+private_key = ""
+
+[[relaying_accounts]]
+name = "gasless-relayer-four"
+private_key = ""
+
+[[relaying_accounts]]
+name = "gasless-relayer-five"
+private_key = ""

@@ -10,4 +10,9 @@ repository.workspace = true
 tokio.workspace = true
 dotenv.workspace = true
 anyhow.workspace = true
+primitives.workspace = true
+tracing.workspace = true
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+clap = {version = "4.5.1", features = ["derive"]}
+toml = "0.8.10"
+tasks = { path = "../../crates/tasks" }
