@@ -1,5 +1,5 @@
 use clap::Parser;
-use primitives::{configs::RelayerConfig, db::create_db_instance};
+use primitives::configs::RelayerConfig;
 use tasks::{monitor::MonitorTask, relay::ServerTask, spawn_tasks};
 use toml::from_str;
 use tracing_subscriber::{filter::LevelFilter, util::SubscriberInitExt};
@@ -21,15 +21,8 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let config_as_string = std::fs::read_to_string(cli_config.config_path)?;
     let config: RelayerConfig = from_str(&config_as_string)?;
 
-    // create system db is one has not been created
-    let mut db_client = create_db_instance(&config.server.db_url)
-        .await
-        .expect("Could not create db instance");
-
     // server config
     let server_config = config.clone().server;
-    //indexer config
-    // let indexer_configs = config.clone().indexer;
 
     tracing::info!("Starting Relay with config: {:?}", config.clone());
 

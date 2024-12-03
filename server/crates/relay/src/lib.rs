@@ -4,7 +4,10 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use primitives::{configs::ServerConfig, db::create_db_instance};
+use primitives::{
+    configs::ServerConfig,
+    db::{create_db_instance, create_request_status_table},
+};
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
@@ -12,6 +15,7 @@ pub mod error;
 pub mod handlers;
 
 pub struct AppState {
+    // this is the database client, servering as the postgres connection pool
     pub db_client: tokio_postgres::Client,
 }
 
@@ -24,6 +28,9 @@ pub async fn run_relayer_server(config: ServerConfig) -> Result<(), anyhow::Erro
         .allow_headers(Any);
 
     let db_client = create_db_instance(&config.db_url).await?;
+
+    // create table if not exists
+    create_request_status_table(&db_client).await?;
 
     let app_state = Arc::new(AppState { db_client });
 
