@@ -19,6 +19,9 @@ impl Processor {
     }
 
     /// This is function would be responsible for processing a single request
+    /// this would just send the request to the chain and wait for it to be mined
+    /// after this has been sent, this tx_hash would be used to wait for the transaction to be mined
+    /// on the monitoring thread
     ///
     /// # Arguments
     /// - `self`
@@ -29,6 +32,9 @@ impl Processor {
     }
 
     /// This is function would be responsible for processing a batch of requests
+    /// this would just send the requests to the chain and wait for it to be mined
+    /// after this has been sent, this tx_hash would be used to wait for the transaction to be mined
+    /// on the monitoring thread
     ///
     /// # Arguments
     /// - `self`
