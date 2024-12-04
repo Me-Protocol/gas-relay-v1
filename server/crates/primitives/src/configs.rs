@@ -1,8 +1,20 @@
 use alloy::{
-    providers::{ProviderBuilder, RootProvider},
+    network::{Ethereum, EthereumWallet},
+    providers::{
+        fillers::{FillProvider, JoinFill, WalletFiller},
+        Identity, ProviderBuilder, RootProvider,
+    },
+    signers::local::PrivateKeySigner,
     transports::http::{Client, Http},
 };
 use serde::{Deserialize, Serialize};
+
+pub type RelayerSignerWithPrivatekey = FillProvider<
+    JoinFill<Identity, WalletFiller<EthereumWallet>>,
+    RootProvider<Http<Client>>,
+    Http<Client>,
+    Ethereum,
+>;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ServerConfig {
@@ -55,6 +67,17 @@ impl ChainsConfig {
 
     pub fn chain_provider(&self) -> RootProvider<Http<Client>> {
         let provider = ProviderBuilder::new().on_http(self.rpc_url.parse().unwrap());
+        provider
+    }
+
+    pub fn chain_provider_with_private_key(&self) -> RelayerSignerWithPrivatekey {
+        let rand_private_key: PrivateKeySigner =
+            self.accounts_private_keys[0].clone().parse().unwrap();
+        let wallet = EthereumWallet::from(rand_private_key);
+        let provider = ProviderBuilder::new()
+            .wallet(wallet)
+            .on_http(self.rpc_url.parse().unwrap());
+
         provider
     }
 }

@@ -1,8 +1,9 @@
 //! This file would be responsible for all the blockchain related operations in the gasless-relayer server.
 use crate::configs::ChainsConfig;
 use alloy::{
-    primitives::Address,
-    providers::RootProvider,
+    network::Ethereum,
+    primitives::{aliases::U48, Address, Bytes, FixedBytes, U256},
+    providers::{PendingTransactionBuilder, RootProvider},
     sol,
     transports::http::{Client, Http},
 };
@@ -24,6 +25,16 @@ sol!(
     "src/contract-artifacts/TrustedForwarder.json"
 );
 
+pub struct ForwardRequestData {
+    pub from: Address,
+    pub to: Address,
+    pub value: U256,
+    pub gas: U256,
+    pub deadline: U48,
+    pub data: Bytes,
+    pub signature: Bytes,
+}
+
 impl Processor {
     pub fn new(chains_config: ChainsConfig, trusted_forwarder: Address) -> Self {
         Self {
@@ -41,7 +52,10 @@ impl Processor {
     /// - `self`
     /// - `request` - The request to be processed
     /// - `chain` - The chain to which the request would be sent
-    pub fn process_request(&self) {
+    pub async fn process_request(&self, request: ForwardRequestData) {
+        let trusted_forwarder_contract = self.get_trusted_forwarder();
+        let req = trusted_forwarder_contract.execute(request.into());
+        let req_stage_two = req.send().await.unwrap();
         todo!()
     }
 
@@ -63,15 +77,34 @@ impl Processor {
     ///
     /// # Arguments
     /// - `self`
-    /// - `tx_hash` - The transaction hash to be monitored
-    /// - `chain` - The chain to which the transaction was sent
-    pub fn wait_for_transaction(&self) {
-        todo!()
+    /// - `pending_tx` - The transaction hash to be monitored
+    pub async fn wait_for_transaction(
+        &self,
+        pending_tx: PendingTransactionBuilder<Http<Client>, Ethereum>,
+    ) -> FixedBytes<32> {
+        // TODO: add configuration for the number of blocks to wait for
+        let tx_hash = pending_tx.watch().await.unwrap();
+        tx_hash
     }
 
     pub fn get_trusted_forwarder(
         &self,
     ) -> TrustedForwarderContractInstance<Http<Client>, RootProvider<Http<Client>>> {
         TrustedForwarderContract::new(self.trusted_forwarder, self.chains_config.chain_provider())
+    }
+}
+
+// impl from `ForwardRequestData` to `ERC2771Forwarder::ForwardRequestData`
+impl From<ForwardRequestData> for ERC2771Forwarder::ForwardRequestData {
+    fn from(data: ForwardRequestData) -> Self {
+        Self {
+            from: data.from,
+            to: data.to,
+            value: data.value,
+            gas: data.gas,
+            deadline: data.deadline,
+            data: data.data,
+            signature: data.signature,
+        }
     }
 }
