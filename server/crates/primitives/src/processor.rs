@@ -1,6 +1,12 @@
 //! This file would be responsible for all the blockchain related operations in the gasless-relayer server.
 use crate::configs::ChainsConfig;
-use alloy::primitives::Address;
+use alloy::{
+    primitives::Address,
+    providers::RootProvider,
+    sol,
+    transports::http::{Client, Http},
+};
+use TrustedForwarderContract::TrustedForwarderContractInstance;
 
 /// This struct would be responsible for processing all the requests to be sent to the blockchain.
 /// struct would also be resonsible for waiting for the transaction to be mined
@@ -10,6 +16,13 @@ pub struct Processor {
     /// This is the address of the trusted forwarder contract
     pub trusted_forwarder: Address,
 }
+
+sol!(
+    #[allow(missing_docs)]
+    #[sol(rpc)]
+    TrustedForwarderContract,
+    "src/contract-artifacts/TrustedForwarder.json"
+);
 
 impl Processor {
     pub fn new(chains_config: ChainsConfig, trusted_forwarder: Address) -> Self {
@@ -54,5 +67,11 @@ impl Processor {
     /// - `chain` - The chain to which the transaction was sent
     pub fn wait_for_transaction(&self) {
         todo!()
+    }
+
+    pub fn get_trusted_forwarder(
+        &self,
+    ) -> TrustedForwarderContractInstance<Http<Client>, RootProvider<Http<Client>>> {
+        TrustedForwarderContract::new(self.trusted_forwarder, self.chains_config.chain_provider())
     }
 }

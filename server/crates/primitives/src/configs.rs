@@ -1,3 +1,7 @@
+use alloy::{
+    providers::{ProviderBuilder, RootProvider},
+    transports::http::{Client, Http},
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -30,4 +34,27 @@ pub struct RelayerConfig {
     pub chains: Vec<ChainsConfig>,
     /// Server config
     pub server: ServerConfig,
+}
+
+impl ChainsConfig {
+    pub fn new(
+        name: Option<String>,
+        rpc_url: String,
+        chain_id: u64,
+        accounts_private_keys: Vec<String>,
+        trusted_forwarder: String,
+    ) -> Self {
+        Self {
+            name,
+            rpc_url,
+            chain_id,
+            accounts_private_keys,
+            trusted_forwarder,
+        }
+    }
+
+    pub fn chain_provider(&self) -> RootProvider<Http<Client>> {
+        let provider = ProviderBuilder::new().on_http(self.rpc_url.parse().unwrap());
+        provider
+    }
 }
