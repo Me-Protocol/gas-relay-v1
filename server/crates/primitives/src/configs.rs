@@ -48,6 +48,11 @@ pub struct RelayerConfig {
     pub server: ServerConfig,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct RelayerAccounts {
+    keys: Vec<String>,
+}
+
 impl ChainsConfig {
     pub fn new(
         name: Option<String>,
@@ -68,5 +73,17 @@ impl ChainsConfig {
     pub fn chain_provider(&self) -> RootProvider<Http<Client>> {
         let provider = ProviderBuilder::new().on_http(self.rpc_url.parse().unwrap());
         provider
+    }
+}
+
+impl RelayerAccounts {
+    pub fn new(keys: Vec<String>) -> Self {
+        Self { keys }
+    }
+
+    pub fn get_current_key(&mut self) -> String {
+        let key = self.keys.pop().unwrap();
+        self.keys.insert(0, key.clone());
+        key
     }
 }
