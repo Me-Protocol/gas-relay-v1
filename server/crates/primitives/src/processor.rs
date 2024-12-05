@@ -34,6 +34,7 @@ sol!(
     "src/contract-artifacts/TrustedForwarder.json"
 );
 
+#[derive(Debug)]
 pub struct ForwardRequestData {
     pub from: Address,
     pub to: Address,
@@ -41,6 +42,7 @@ pub struct ForwardRequestData {
     pub gas: U256,
     pub deadline: U48,
     pub data: Bytes,
+    pub nonce: U256,
     pub signature: Bytes,
 }
 
@@ -178,10 +180,33 @@ mod tests {
     use super::*;
     use crate::configs::ChainsConfig;
     use alloy::{
-        network::EthereumWallet, node_bindings::Anvil, primitives::Address,
-        providers::ProviderBuilder, signers::local::PrivateKeySigner,
+        network::{EthereumWallet, NetworkWallet}, node_bindings::Anvil, primitives::{b256, Address, B256},
+        providers::ProviderBuilder, signers::{local::PrivateKeySigner, Signer}, sol_types::{eip712_domain, SolStruct},
     };
+    use serde::Serialize;
     use std::str::FromStr;
+    
+    sol!(
+        #[allow(missing_docs)]
+        #[sol(rpc)]
+        MockContract,
+        "src/contract-artifacts/MockContract.json"
+    );
+    
+    sol! {
+        #[allow(missing_docs)]
+        #[derive(Serialize)]
+        struct FowardRequestWithNonce {
+            address from;
+            address to;
+            uint256 value;
+            uint256 gas;
+            uint256 nonce;
+            uint48 deadline;
+            bytes data;
+        }
+    }
+
 
     #[tokio::test]
     async fn test_process_request() {
@@ -193,11 +218,15 @@ mod tests {
             .with_recommended_fillers()
             .wallet(wallet)
             .on_http(http_rpc_url.parse().unwrap());
-
+        
+        
         let tf = TrustedForwarderContract::deploy(provider.clone(), "TF".to_string())
             .await
             .unwrap();
-        let tf_instance = TrustedForwarderContract::new(*tf.address(), provider);
+        let tf_instance = TrustedForwarderContract::new(*tf.address(), provider.clone());
+        let mock = MockContract::deploy(provider.clone(), tf_instance.address().clone())
+            .await
+            .unwrap();
 
         let chains_config = ChainsConfig {
             name: Some("Ethereum Dev Network".to_string()),
@@ -206,5 +235,43 @@ mod tests {
             accounts_private_keys: vec![signer.to_bytes().to_string()],
             trusted_forwarder: tf_instance.address().to_string(),
         };
+        
+        let processor = Processor::new(chains_config, *tf_instance.address());
+        
+        let domain = eip712_domain! {
+            name: "TF",
+            version: "1",
+            chain_id: anvil.chain_id(),
+            verifying_contract: tf_instance.address().clone(),
+            salt: B256::ZERO,
+        };
+        
+        let request = FowardRequestWithNonce {
+            from: signer.address(),
+            to: *mock.address(),
+            value: U256::from(0),
+            gas: U256::from(100000),
+            nonce: U256::from(0),
+            deadline: U48::MAX,
+            data: mock.mockFunction().calldata().clone(),
+        };
+        
+        let hash = request.eip712_signing_hash(&domain);
+        let signature = signer.sign_hash(&hash).await.unwrap();
+        
+        let forward_request = ForwardRequestData {
+            from: request.from,
+            to: request.to,
+            value: request.value,
+            gas: request.gas,
+            deadline: request.deadline,
+            data: request.data,
+            nonce: request.nonce,
+            signature: signature.as_bytes().into(),
+        };
+        
+        println!("{:?}", forward_request);
+        
+        let pending_tx = processor.process_request(forward_request).await;
     }
 }
