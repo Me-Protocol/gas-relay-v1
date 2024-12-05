@@ -1,4 +1,6 @@
 //! This file would be responsible for all the blockchain related operations in the gasless-relayer server.
+use std::str::FromStr;
+
 use crate::configs::ChainsConfig;
 use alloy::{
     network::Ethereum,
@@ -52,11 +54,13 @@ impl Processor {
     /// - `self`
     /// - `request` - The request to be processed
     /// - `chain` - The chain to which the request would be sent
-    pub async fn process_request(&self, request: ForwardRequestData) {
+    pub async fn process_request(
+        &self,
+        request: ForwardRequestData,
+    ) -> PendingTransactionBuilder<Http<Client>, Ethereum> {
         let trusted_forwarder_contract = self.get_trusted_forwarder();
         let req = trusted_forwarder_contract.execute(request.into());
-        let req_stage_two = req.send().await.unwrap();
-        todo!()
+        req.send().await.unwrap()
     }
 
     /// This is function would be responsible for processing a batch of requests
@@ -68,8 +72,19 @@ impl Processor {
     /// - `self`
     /// - `requests` - The requests to be processed
     /// - `chain` - The chain to which the requests would be sent
-    pub fn process_batch_request(&self) {
-        todo!()
+    pub async fn process_batch_request(
+        &self,
+        request: Vec<ForwardRequestData>,
+        refund_receiver: String,
+    ) -> PendingTransactionBuilder<Http<Client>, Ethereum> {
+        let trusted_forwarder_contract = self.get_trusted_forwarder();
+        let request = request
+            .iter()
+            .map(|r| <&ForwardRequestData as Into<ERC2771Forwarder::ForwardRequestData>>::into(r))
+            .collect();
+        let req = trusted_forwarder_contract
+            .executeBatch(request, Address::from_str(&refund_receiver).unwrap());
+        req.send().await.unwrap()
     }
 
     /// This function would be responsible for waiting for the transaction to be mined
@@ -94,7 +109,7 @@ impl Processor {
     }
 }
 
-// impl from `ForwardRequestData` to `ERC2771Forwarder::ForwardRequestData`
+/// impl from `ForwardRequestData` to `ERC2771Forwarder::ForwardRequestData`
 impl From<ForwardRequestData> for ERC2771Forwarder::ForwardRequestData {
     fn from(data: ForwardRequestData) -> Self {
         Self {
@@ -105,6 +120,21 @@ impl From<ForwardRequestData> for ERC2771Forwarder::ForwardRequestData {
             deadline: data.deadline,
             data: data.data,
             signature: data.signature,
+        }
+    }
+}
+
+/// impl from `&ForwardRequestData` to `ERC2771Forwarder::ForwardRequestData`
+impl From<&ForwardRequestData> for ERC2771Forwarder::ForwardRequestData {
+    fn from(data: &ForwardRequestData) -> Self {
+        Self {
+            from: data.from,
+            to: data.to,
+            value: data.value,
+            gas: data.gas,
+            deadline: data.deadline,
+            data: data.data.clone(),
+            signature: data.signature.clone(),
         }
     }
 }
