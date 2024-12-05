@@ -3,9 +3,16 @@ use std::str::FromStr;
 
 use crate::configs::ChainsConfig;
 use alloy::{
-    network::Ethereum,
+    network::{Ethereum, EthereumWallet},
     primitives::{aliases::U48, Address, Bytes, FixedBytes, U256},
-    providers::{PendingTransactionBuilder, RootProvider},
+    providers::{
+        fillers::{
+            BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller,
+            WalletFiller,
+        },
+        PendingTransactionBuilder, ProviderBuilder, RootProvider,
+    },
+    signers::local::PrivateKeySigner,
     sol,
     transports::http::{Client, Http},
 };
@@ -104,8 +111,35 @@ impl Processor {
 
     pub fn get_trusted_forwarder(
         &self,
-    ) -> TrustedForwarderContractInstance<Http<Client>, RootProvider<Http<Client>>> {
-        TrustedForwarderContract::new(self.trusted_forwarder, self.chains_config.chain_provider())
+    ) -> TrustedForwarderContractInstance<
+        Http<Client>,
+        FillProvider<
+            JoinFill<
+                JoinFill<
+                    alloy::providers::Identity,
+                    JoinFill<
+                        GasFiller,
+                        JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>,
+                    >,
+                >,
+                WalletFiller<EthereumWallet>,
+            >,
+            RootProvider<Http<Client>>,
+            Http<Client>,
+            Ethereum,
+        >,
+    > {
+        let rand_private_key: PrivateKeySigner = self.chains_config.accounts_private_keys[0]
+            .clone()
+            .parse()
+            .unwrap();
+        let wallet = EthereumWallet::from(rand_private_key.clone());
+        let provider = ProviderBuilder::new()
+            .with_recommended_fillers()
+            .wallet(wallet)
+            .on_http(self.chains_config.rpc_url.parse().unwrap());
+
+        TrustedForwarderContract::new(self.trusted_forwarder, provider)
     }
 }
 
@@ -136,5 +170,41 @@ impl From<&ForwardRequestData> for ERC2771Forwarder::ForwardRequestData {
             data: data.data.clone(),
             signature: data.signature.clone(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::configs::ChainsConfig;
+    use alloy::{
+        network::EthereumWallet, node_bindings::Anvil, primitives::Address,
+        providers::ProviderBuilder, signers::local::PrivateKeySigner,
+    };
+    use std::str::FromStr;
+
+    #[tokio::test]
+    async fn test_process_request() {
+        let anvil = Anvil::new().block_time(1).try_spawn().unwrap();
+        let http_rpc_url = anvil.endpoint();
+        let signer: PrivateKeySigner = anvil.keys()[0].clone().into();
+        let wallet = EthereumWallet::from(signer.clone());
+        let provider = ProviderBuilder::new()
+            .with_recommended_fillers()
+            .wallet(wallet)
+            .on_http(http_rpc_url.parse().unwrap());
+
+        let tf = TrustedForwarderContract::deploy(provider.clone(), "TF".to_string())
+            .await
+            .unwrap();
+        let tf_instance = TrustedForwarderContract::new(*tf.address(), provider);
+
+        let chains_config = ChainsConfig {
+            name: Some("Ethereum Dev Network".to_string()),
+            rpc_url: http_rpc_url,
+            chain_id: anvil.chain_id(),
+            accounts_private_keys: vec![signer.to_bytes().to_string()],
+            trusted_forwarder: tf_instance.address().to_string(),
+        };
     }
 }
