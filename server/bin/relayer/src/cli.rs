@@ -26,12 +26,12 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     tracing::info!("Starting Relay with config: {:?}", config.clone());
 
-    // add server task to the tasks
-    let mut tasks = vec![ServerTask::new(server_config).boxed()];
-    // add monitinor task to the tasks
-    tasks.push(MonitorTask::new("".to_string()).boxed());
-
-    spawn_tasks(tasks, tokio::signal::ctrl_c()).await;
+    spawn_tasks(
+        ServerTask::new(server_config).boxed(),
+        MonitorTask::new("".to_string()).boxed(),
+        tokio::signal::ctrl_c(),
+    )
+    .await;
 
     Ok(())
 }
