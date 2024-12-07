@@ -1,6 +1,4 @@
 //! This file would be responsible for all the blockchain related operations in the gasless-relayer server.
-use std::str::FromStr;
-
 use crate::configs::ChainsConfig;
 use alloy::{
     network::{Ethereum, EthereumWallet},
@@ -16,6 +14,7 @@ use alloy::{
     sol,
     transports::http::{Client, Http},
 };
+use std::str::FromStr;
 use TrustedForwarderContract::TrustedForwarderContractInstance;
 
 /// This struct would be responsible for processing all the requests to be sent to the blockchain.
@@ -180,47 +179,34 @@ mod tests {
     use super::*;
     use crate::configs::ChainsConfig;
     use alloy::{
-        network::{EthereumWallet, NetworkWallet}, node_bindings::Anvil, primitives::{b256, Address, B256},
-        providers::ProviderBuilder, signers::{local::PrivateKeySigner, Signer}, sol_types::{eip712_domain, SolStruct},
+        network::EthereumWallet,
+        node_bindings::Anvil,
+        primitives::{b256, bytes},
+        providers::ProviderBuilder,
+        signers::local::PrivateKeySigner,
     };
-    use serde::Serialize;
-    use std::str::FromStr;
-    
+
     sol!(
         #[allow(missing_docs)]
         #[sol(rpc)]
         MockContract,
         "src/contract-artifacts/MockContract.json"
     );
-    
-    sol! {
-        #[allow(missing_docs)]
-        #[derive(Serialize)]
-        struct FowardRequestWithNonce {
-            address from;
-            address to;
-            uint256 value;
-            uint256 gas;
-            uint256 nonce;
-            uint48 deadline;
-            bytes data;
-        }
-    }
-
 
     #[tokio::test]
     async fn test_process_request() {
         let anvil = Anvil::new().block_time(1).try_spawn().unwrap();
         let http_rpc_url = anvil.endpoint();
         let signer: PrivateKeySigner = anvil.keys()[0].clone().into();
+        let alice = b256!("ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80");
+        let signer_alice = PrivateKeySigner::from_bytes(&alice).unwrap();
         let wallet = EthereumWallet::from(signer.clone());
         let provider = ProviderBuilder::new()
             .with_recommended_fillers()
             .wallet(wallet)
             .on_http(http_rpc_url.parse().unwrap());
-        
-        
-        let tf = TrustedForwarderContract::deploy(provider.clone(), "TF".to_string())
+
+        let tf = TrustedForwarderContract::deploy(provider.clone(), "ERC2771Forwarder".to_string())
             .await
             .unwrap();
         let tf_instance = TrustedForwarderContract::new(*tf.address(), provider.clone());
@@ -235,43 +221,20 @@ mod tests {
             accounts_private_keys: vec![signer.to_bytes().to_string()],
             trusted_forwarder: tf_instance.address().to_string(),
         };
-        
+
         let processor = Processor::new(chains_config, *tf_instance.address());
-        
-        let domain = eip712_domain! {
-            name: "TF",
-            version: "1",
-            chain_id: anvil.chain_id(),
-            verifying_contract: tf_instance.address().clone(),
-            salt: B256::ZERO,
-        };
-        
-        let request = FowardRequestWithNonce {
-            from: signer.address(),
+
+        let forward_request = ForwardRequestData {
+            from: signer_alice.address(),
             to: *mock.address(),
             value: U256::from(0),
             gas: U256::from(100000),
             nonce: U256::from(0),
-            deadline: U48::MAX,
+            deadline: U48::from(1733533191),
             data: mock.mockFunction().calldata().clone(),
+            signature: bytes!("cf8b1890beb9783665ee231e7046e7fa64e2e87d450bc04bf45f4f2cbf87734b235af0c44d829aca7faf663476ff9e5c81f160d866cf72a1ffb14db796cd10b31b"),
         };
-        
-        let hash = request.eip712_signing_hash(&domain);
-        let signature = signer.sign_hash(&hash).await.unwrap();
-        
-        let forward_request = ForwardRequestData {
-            from: request.from,
-            to: request.to,
-            value: request.value,
-            gas: request.gas,
-            deadline: request.deadline,
-            data: request.data,
-            nonce: request.nonce,
-            signature: signature.as_bytes().into(),
-        };
-        
-        println!("{:?}", forward_request);
-        
-        let pending_tx = processor.process_request(forward_request).await;
+
+        let _pending_tx = processor.process_request(forward_request).await;
     }
 }

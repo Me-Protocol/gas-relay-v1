@@ -2,9 +2,8 @@ use alloy::{
     network::{Ethereum, EthereumWallet},
     providers::{
         fillers::{FillProvider, JoinFill, WalletFiller},
-        Identity, Provider, ProviderBuilder, RootProvider,
+        Identity, ProviderBuilder, RootProvider,
     },
-    signers::local::PrivateKeySigner,
     transports::http::{Client, Http},
 };
 use serde::{Deserialize, Serialize};
