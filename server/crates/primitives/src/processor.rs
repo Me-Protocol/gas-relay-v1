@@ -83,6 +83,7 @@ impl Processor {
     /// - `self`
     /// - `requests` - The requests to be processed
     /// - `chain` - The chain to which the requests would be sent
+    /// - `request_id` - The id of the request
     pub async fn process_batch_request(
         &self,
         request: Vec<ForwardRequestData>,

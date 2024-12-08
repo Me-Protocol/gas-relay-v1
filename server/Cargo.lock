@@ -2304,6 +2304,10 @@ name = "monitor"
 version = "0.1.0-beta"
 dependencies = [
  "anyhow",
+ "chrono",
+ "primitives",
+ "tokio",
+ "tokio-postgres",
 ]
 
 [[package]]

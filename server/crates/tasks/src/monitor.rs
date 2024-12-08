@@ -10,18 +10,13 @@ use tracing::info;
 
 #[derive(Debug)]
 pub struct MonitorTask {
-    pub config: String,
-    pub processor: Processor,
+    pub db_url: String,
     pub mpsc_recv: Receiver<PendingRequest>,
 }
 
 impl MonitorTask {
-    pub fn new(config: String, processor: Processor, mpsc_recv: Receiver<PendingRequest>) -> Self {
-        Self {
-            config,
-            processor,
-            mpsc_recv,
-        }
+    pub fn new(db_url: String, mpsc_recv: Receiver<PendingRequest>) -> Self {
+        Self { db_url, mpsc_recv }
     }
 
     /// Converts the task into a boxed trait object.
@@ -35,7 +30,10 @@ impl Task for MonitorTask {
     async fn run(mut self: Box<Self>, shutdown_token: CancellationToken) -> anyhow::Result<()> {
         let monitor_handle = tokio::spawn(async move {
             select! {
-                monitor = run_monitor_task() => {
+                monitor = run_monitor_task(
+                    self.db_url,
+                    self.mpsc_recv,
+                ) => {
                     if monitor.is_err() {
                         info!("Monitor failed to start");
                     }

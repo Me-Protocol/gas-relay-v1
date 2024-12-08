@@ -27,6 +27,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     // server config
     let server_config = config.clone().server;
+    let db_url = server_config.db_url.clone();
     let processor = Processor::new(config.clone().chains);
 
     let (pending_tx_sender, pending_tx_recv) = mpsc::channel::<PendingRequest>(100);
@@ -35,7 +36,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     spawn_tasks(
         ServerTask::new(server_config, processor.clone(), pending_tx_sender).boxed(),
-        MonitorTask::new("".to_string(), processor, pending_tx_recv).boxed(),
+        MonitorTask::new(db_url, pending_tx_recv).boxed(),
         tokio::signal::ctrl_c(),
     )
     .await;
