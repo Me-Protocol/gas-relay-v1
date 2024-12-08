@@ -2,7 +2,7 @@ use alloy::{
     network::{Ethereum, EthereumWallet},
     providers::{
         fillers::{FillProvider, JoinFill, WalletFiller},
-        Identity, ProviderBuilder, RootProvider,
+        Identity, PendingTransactionBuilder, ProviderBuilder, RootProvider,
     },
     transports::http::{Client, Http},
 };
@@ -50,6 +50,12 @@ pub struct RelayerConfig {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RelayerAccounts {
     keys: Vec<String>,
+}
+
+#[derive(Debug)]
+pub struct PendingRequest {
+    pub request_id: String,
+    pub tx_pending: PendingTransactionBuilder<Http<Client>, Ethereum>,
 }
 
 impl ChainsConfig {

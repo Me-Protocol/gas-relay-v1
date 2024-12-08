@@ -1,6 +1,10 @@
-use alloy::primitives::B256;
+use std::str::FromStr;
+
+use alloy::primitives::{aliases::U48, Address, Bytes, B256, U256};
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
+
+use crate::processor::ForwardRequestData;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum RequestState {
@@ -64,4 +68,19 @@ impl From<RequestState> for String {
 
 pub fn generate_request_id() -> String {
     B256::random().to_string()
+}
+
+impl RelayRequest {
+    pub fn into(self) -> ForwardRequestData {
+        ForwardRequestData {
+            from: Address::from_str(&self.from).unwrap(),
+            to: Address::from_str(&self.to).unwrap(),
+            value: U256::from(self.value),
+            gas: U256::from(self.gas),
+            deadline: U48::from(self.deadline),
+            data: Bytes::from_str(&self.data).unwrap(),
+            nonce: U256::from(self.nonce),
+            signature: Bytes::from_str(&self.signature).unwrap(),
+        }
+    }
 }

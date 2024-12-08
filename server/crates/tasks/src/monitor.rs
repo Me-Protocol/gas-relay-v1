@@ -3,18 +3,25 @@ use crate::Task;
 use anyhow::bail;
 use async_trait::async_trait;
 use monitor::run_monitor_task;
-use tokio::{select, try_join};
+use primitives::{configs::PendingRequest, processor::Processor};
+use tokio::{select, sync::mpsc::Receiver, try_join};
 use tokio_util::sync::CancellationToken;
 use tracing::info;
 
 #[derive(Debug)]
 pub struct MonitorTask {
     pub config: String,
+    pub processor: Processor,
+    pub mpsc_recv: Receiver<PendingRequest>,
 }
 
 impl MonitorTask {
-    pub fn new(config: String) -> Self {
-        Self { config }
+    pub fn new(config: String, processor: Processor, mpsc_recv: Receiver<PendingRequest>) -> Self {
+        Self {
+            config,
+            processor,
+            mpsc_recv,
+        }
     }
 
     /// Converts the task into a boxed trait object.

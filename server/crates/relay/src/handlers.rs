@@ -29,7 +29,7 @@ pub async fn relay_request(
     let request_status = inital_insert_request_status(
         &state.db_client,
         relay_request.chain_id,
-        request_id,
+        request_id.clone(),
         RequestState::Pending,
         false,
     )
@@ -37,7 +37,12 @@ pub async fn relay_request(
     .unwrap();
 
     // shot a request to the process (this is where the chain interaction takes place)
+    let pending_tx = state
+        .processor
+        .process_request(relay_request.into(), request_id, 0)
+        .await;
     // broad cast a message via the chanel to monitor tx and update db... this would be async (would not be waiting for the response)
+    state.mpsc_sender.send(pending_tx).await.unwrap();
 
     Ok(Json(request_status))
 }

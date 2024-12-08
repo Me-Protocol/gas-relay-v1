@@ -1,5 +1,5 @@
 //! This file would be responsible for all the blockchain related operations in the gasless-relayer server.
-use crate::configs::ChainsConfig;
+use crate::configs::{ChainsConfig, PendingRequest};
 use alloy::{
     network::{Ethereum, EthereumWallet},
     primitives::{aliases::U48, Address, Bytes, FixedBytes, U256},
@@ -19,11 +19,10 @@ use TrustedForwarderContract::TrustedForwarderContractInstance;
 
 /// This struct would be responsible for processing all the requests to be sent to the blockchain.
 /// struct would also be resonsible for waiting for the transaction to be mined
+#[derive(Debug, Clone)]
 pub struct Processor {
-    /// The chain to which the requests would be sent
-    pub chains_config: ChainsConfig,
-    /// This is the address of the trusted forwarder contract
-    pub trusted_forwarder: Address,
+    /// This are the cinfig for the chains this messages would be sent to
+    pub chains_config: Vec<ChainsConfig>,
 }
 
 sol!(
@@ -46,11 +45,8 @@ pub struct ForwardRequestData {
 }
 
 impl Processor {
-    pub fn new(chains_config: ChainsConfig, trusted_forwarder: Address) -> Self {
-        Self {
-            chains_config,
-            trusted_forwarder,
-        }
+    pub fn new(chains_config: Vec<ChainsConfig>) -> Self {
+        Self { chains_config }
     }
 
     /// This is function would be responsible for processing a single request
@@ -65,10 +61,17 @@ impl Processor {
     pub async fn process_request(
         &self,
         request: ForwardRequestData,
-    ) -> PendingTransactionBuilder<Http<Client>, Ethereum> {
-        let trusted_forwarder_contract = self.get_trusted_forwarder();
+        request_id: String,
+        chain_index: usize,
+    ) -> PendingRequest {
+        let trusted_forwarder_contract = self.get_trusted_forwarder(chain_index);
         let req = trusted_forwarder_contract.execute(request.into());
-        req.send().await.unwrap()
+        let pending_tx = req.send().await.unwrap();
+
+        PendingRequest {
+            request_id,
+            tx_pending: pending_tx,
+        }
     }
 
     /// This is function would be responsible for processing a batch of requests
@@ -84,8 +87,9 @@ impl Processor {
         &self,
         request: Vec<ForwardRequestData>,
         refund_receiver: String,
+        chain_index: usize,
     ) -> PendingTransactionBuilder<Http<Client>, Ethereum> {
-        let trusted_forwarder_contract = self.get_trusted_forwarder();
+        let trusted_forwarder_contract = self.get_trusted_forwarder(chain_index);
         let request = request
             .iter()
             .map(|r| <&ForwardRequestData as Into<ERC2771Forwarder::ForwardRequestData>>::into(r))
@@ -112,6 +116,7 @@ impl Processor {
 
     pub fn get_trusted_forwarder(
         &self,
+        chain_index: usize,
     ) -> TrustedForwarderContractInstance<
         Http<Client>,
         FillProvider<
@@ -130,7 +135,8 @@ impl Processor {
             Ethereum,
         >,
     > {
-        let rand_private_key: PrivateKeySigner = self.chains_config.accounts_private_keys[0]
+        let rand_private_key: PrivateKeySigner = self.chains_config[chain_index]
+            .accounts_private_keys[0]
             .clone()
             .parse()
             .unwrap();
@@ -138,9 +144,12 @@ impl Processor {
         let provider = ProviderBuilder::new()
             .with_recommended_fillers()
             .wallet(wallet)
-            .on_http(self.chains_config.rpc_url.parse().unwrap());
+            .on_http(self.chains_config[chain_index].rpc_url.parse().unwrap());
 
-        TrustedForwarderContract::new(self.trusted_forwarder, provider)
+        TrustedForwarderContract::new(
+            Address::from_str(&self.chains_config[chain_index].trusted_forwarder).unwrap(),
+            provider,
+        )
     }
 }
 
@@ -222,7 +231,7 @@ mod tests {
             trusted_forwarder: tf_instance.address().to_string(),
         };
 
-        let processor = Processor::new(chains_config, *tf_instance.address());
+        let processor = Processor::new(vec![chains_config]);
 
         let forward_request = ForwardRequestData {
             from: signer_alice.address(),
@@ -235,6 +244,8 @@ mod tests {
             signature: bytes!("cf8b1890beb9783665ee231e7046e7fa64e2e87d450bc04bf45f4f2cbf87734b235af0c44d829aca7faf663476ff9e5c81f160d866cf72a1ffb14db796cd10b31b"),
         };
 
-        let _pending_tx = processor.process_request(forward_request).await;
+        let _pending_tx = processor
+            .process_request(forward_request, "1".to_string(), 0)
+            .await;
     }
 }
