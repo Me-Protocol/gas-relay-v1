@@ -88,7 +88,8 @@ impl Processor {
         request: Vec<ForwardRequestData>,
         refund_receiver: String,
         chain_index: usize,
-    ) -> PendingTransactionBuilder<Http<Client>, Ethereum> {
+        request_id: String,
+    ) -> PendingRequest {
         let trusted_forwarder_contract = self.get_trusted_forwarder(chain_index);
         let request = request
             .iter()
@@ -96,7 +97,12 @@ impl Processor {
             .collect();
         let req = trusted_forwarder_contract
             .executeBatch(request, Address::from_str(&refund_receiver).unwrap());
-        req.send().await.unwrap()
+        let pending_tx = req.send().await.unwrap();
+
+        PendingRequest {
+            request_id,
+            tx_pending: pending_tx,
+        }
     }
 
     /// This function would be responsible for waiting for the transaction to be mined

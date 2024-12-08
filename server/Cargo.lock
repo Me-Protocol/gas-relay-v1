@@ -2882,6 +2882,7 @@ dependencies = [
  "anyhow",
  "axum",
  "primitives",
+ "serde",
  "tokio",
  "tokio-postgres",
  "tower-http",

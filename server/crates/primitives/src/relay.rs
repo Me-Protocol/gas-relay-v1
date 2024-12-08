@@ -71,7 +71,7 @@ pub fn generate_request_id() -> String {
 }
 
 impl RelayRequest {
-    pub fn into(self) -> ForwardRequestData {
+    pub fn into_data(&self) -> ForwardRequestData {
         ForwardRequestData {
             from: Address::from_str(&self.from).unwrap(),
             to: Address::from_str(&self.to).unwrap(),
