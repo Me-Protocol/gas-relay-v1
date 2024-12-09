@@ -24,7 +24,7 @@ pub struct ServerConfig {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ChainsConfig {
+pub struct ChainsConfigParseable {
     /// This is the name of the relayer server
     pub name: Option<String>,
     /// This is the rpc_url of the chain
@@ -38,11 +38,25 @@ pub struct ChainsConfig {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ChainsConfig {
+    /// This is the name of the relayer server
+    pub name: Option<String>,
+    /// This is the rpc_url of the chain
+    pub rpc_url: String,
+    /// This is the chain_id of the chain
+    pub chain_id: u64,
+    /// This are the private keys controlling this relayers
+    pub accounts_private_keys: RelayerAccounts,
+    /// This is the trusted forwarder address for the chain
+    pub trusted_forwarder: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RelayerConfig {
     /// This is the name of the relayer server
     pub name: Option<String>,
     /// This is the config for the chains
-    pub chains: Vec<ChainsConfig>,
+    pub chains: Vec<ChainsConfigParseable>,
     /// Server config
     pub server: ServerConfig,
 }
@@ -63,7 +77,7 @@ impl ChainsConfig {
         name: Option<String>,
         rpc_url: String,
         chain_id: u64,
-        accounts_private_keys: Vec<String>,
+        accounts_private_keys: RelayerAccounts,
         trusted_forwarder: String,
     ) -> Self {
         Self {
@@ -90,5 +104,17 @@ impl RelayerAccounts {
         let key = self.keys.pop().unwrap();
         self.keys.insert(0, key.clone());
         key
+    }
+}
+
+impl ChainsConfigParseable {
+    pub fn to_config(&self) -> ChainsConfig {
+        ChainsConfig::new(
+            self.name.clone(),
+            self.rpc_url.clone(),
+            self.chain_id,
+            RelayerAccounts::new(self.accounts_private_keys.clone()),
+            self.trusted_forwarder.clone(),
+        )
     }
 }

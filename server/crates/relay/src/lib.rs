@@ -10,7 +10,7 @@ use primitives::{
     processor::Processor,
 };
 use std::sync::Arc;
-use tokio::{net::TcpListener, sync::mpsc::Sender};
+use tokio::{net::TcpListener, sync::{mpsc::Sender, Mutex}};
 use tower_http::cors::{Any, CorsLayer};
 pub mod error;
 pub mod handlers;
@@ -19,7 +19,7 @@ pub struct AppState {
     // this is the database client, servering as the postgres connection pool
     pub db_client: tokio_postgres::Client,
     // this is the blockchain processor
-    pub processor: Processor,
+    pub processor: Mutex<Processor>,
     // this mpsc sender
     pub mpsc_sender: Sender<PendingRequest>,
 }
@@ -41,9 +41,9 @@ pub async fn run_relayer_server(
     // create table if not exists
     create_request_status_table(&db_client).await?;
 
-    let app_state = Arc::new(AppState {
+    let mut app_state = Arc::new(AppState {
         db_client,
-        processor,
+        processor: Mutex::new(processor),
         mpsc_sender,
     });
 
@@ -51,7 +51,7 @@ pub async fn run_relayer_server(
         .route("/", get(|| async { "Gasless Relayer." }))
         .route("/status/:request_id", get(handlers::get_request_status))
         .route("/relay", post(handlers::relay_request))
-        .route("/batch-relay", post(handlers::relay_request))
+        .route("/batch-relay", post(handlers::batch_relay_request))
         .layer(cors)
         .with_state(app_state);
 

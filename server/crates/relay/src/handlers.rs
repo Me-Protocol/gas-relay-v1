@@ -45,9 +45,10 @@ pub async fn relay_request(
 
     // shot a request to the process (this is where the chain interaction takes place)
     let pending_tx = state
-        .processor
+        .processor.lock().await
         .process_request(relay_request.into_data(), request_id, 0)
         .await;
+
     // broad cast a message via the chanel to monitor tx and update db... this would be async (would not be waiting for the response)
     state.mpsc_sender.send(pending_tx).await.unwrap();
 
@@ -82,7 +83,7 @@ pub async fn batch_relay_request(
 
     // shot a request to the process (this is where the chain interaction takes place)
     let pending_tx = state
-        .processor
+        .processor.lock().await
         .process_batch_request(
             requests,
             relay_requests.refund_receiver.clone(),
