@@ -1,3 +1,5 @@
+import { ethers } from 'ethers'
+
 let trustedFowarderAbi = [
   {
     type: 'constructor',
@@ -153,3 +155,7 @@ let trustedFowarderAbi = [
   { type: 'error', name: 'InvalidShortString', inputs: [] },
   { type: 'error', name: 'StringTooLong', inputs: [{ name: 'str', type: 'string', internalType: 'string' }] },
 ]
+
+export function trustedForwarderContract(address: string, signer: ethers.Signer) {
+  return new ethers.Contract(address, trustedFowarderAbi, signer)
+}

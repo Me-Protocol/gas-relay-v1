@@ -1,4 +1,4 @@
-async function getDomain(contract) {
+export async function getDomain(contract) {
   const { fields, name, version, chainId, verifyingContract, salt, extensions } = await contract.eip712Domain()
 
   if (extensions.length > 0) {
@@ -22,9 +22,13 @@ async function getDomain(contract) {
   return domain
 }
 
+export function domainType(domain) {
+  return eip712Types.EIP712Domain.filter(({ name }) => domain[name] !== undefined)
+}
+
 const mapValues = (obj, fn) => Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, fn(v)]))
 const formatType = (schema) => Object.entries(schema).map(([name, type]) => ({ name, type }))
-const eip712Types = mapValues(
+export const eip712Types = mapValues(
   {
     EIP712Domain: {
       name: 'string',
