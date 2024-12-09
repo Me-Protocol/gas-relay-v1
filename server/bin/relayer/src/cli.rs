@@ -1,6 +1,10 @@
 use clap::Parser;
-use primitives::configs::RelayerConfig;
+use primitives::{
+    configs::{PendingRequest, RelayerConfig},
+    processor::Processor,
+};
 use tasks::{monitor::MonitorTask, relay::ServerTask, spawn_tasks};
+use tokio::sync::mpsc;
 use toml::from_str;
 use tracing_subscriber::{filter::LevelFilter, util::SubscriberInitExt};
 
@@ -23,15 +27,19 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     // server config
     let server_config = config.clone().server;
+    let db_url = server_config.db_url.clone();
+    let processor = Processor::new(config.clone().chains);
+
+    let (pending_tx_sender, pending_tx_recv) = mpsc::channel::<PendingRequest>(100);
 
     tracing::info!("Starting Relay with config: {:?}", config.clone());
 
-    // add server task to the tasks
-    let mut tasks = vec![ServerTask::new(server_config).boxed()];
-    // add monitinor task to the tasks
-    tasks.push(MonitorTask::new("".to_string()).boxed());
-
-    spawn_tasks(tasks, tokio::signal::ctrl_c()).await;
+    spawn_tasks(
+        ServerTask::new(server_config, processor.clone(), pending_tx_sender).boxed(),
+        MonitorTask::new(db_url, pending_tx_recv).boxed(),
+        tokio::signal::ctrl_c(),
+    )
+    .await;
 
     Ok(())
 }

@@ -2,9 +2,8 @@ use alloy::{
     network::{Ethereum, EthereumWallet},
     providers::{
         fillers::{FillProvider, JoinFill, WalletFiller},
-        Identity, ProviderBuilder, RootProvider,
+        Identity, PendingTransactionBuilder, ProviderBuilder, RootProvider,
     },
-    signers::local::PrivateKeySigner,
     transports::http::{Client, Http},
 };
 use serde::{Deserialize, Serialize};
@@ -48,6 +47,17 @@ pub struct RelayerConfig {
     pub server: ServerConfig,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct RelayerAccounts {
+    keys: Vec<String>,
+}
+
+#[derive(Debug)]
+pub struct PendingRequest {
+    pub request_id: String,
+    pub tx_pending: PendingTransactionBuilder<Http<Client>, Ethereum>,
+}
+
 impl ChainsConfig {
     pub fn new(
         name: Option<String>,
@@ -69,15 +79,16 @@ impl ChainsConfig {
         let provider = ProviderBuilder::new().on_http(self.rpc_url.parse().unwrap());
         provider
     }
+}
 
-    pub fn chain_provider_with_private_key(&self) -> RelayerSignerWithPrivatekey {
-        let rand_private_key: PrivateKeySigner =
-            self.accounts_private_keys[0].clone().parse().unwrap();
-        let wallet = EthereumWallet::from(rand_private_key);
-        let provider = ProviderBuilder::new()
-            .wallet(wallet)
-            .on_http(self.rpc_url.parse().unwrap());
+impl RelayerAccounts {
+    pub fn new(keys: Vec<String>) -> Self {
+        Self { keys }
+    }
 
-        provider
+    pub fn get_current_key(&mut self) -> String {
+        let key = self.keys.pop().unwrap();
+        self.keys.insert(0, key.clone());
+        key
     }
 }

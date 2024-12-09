@@ -1,7 +1,8 @@
 //! This file discribes how multi-threadable tasks would be structured in the gasless-relayer server.
 use async_trait::async_trait;
 use futures::{future::try_join_all, Future};
-use tokio::sync::mpsc;
+use primitives::configs::PendingRequest;
+use tokio::{sync::mpsc, task::JoinHandle};
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info};
 
@@ -15,8 +16,11 @@ pub trait Task: Sync + Send + 'static {
 }
 
 /// This takes in a list of tasks and runs them concurrently and waiting for a shutdown signal.
-pub async fn spawn_tasks<T, R, E>(tasks: impl IntoIterator<Item = Box<dyn Task>>, signal: T)
-where
+pub async fn spawn_tasks<T, R, E>(
+    relay_server: Box<dyn Task>,
+    monitor_server: Box<dyn Task>,
+    signal: T,
+) where
     T: Future<Output = Result<R, E>> + Send + 'static,
     E: std::fmt::Debug,
 {
@@ -24,15 +28,30 @@ where
     let shutdown_token = CancellationToken::new();
     let mut shutdown_scope = Some(shutdown_scope);
 
-    let handles = tasks.into_iter().map(|task| {
+    // Spawn the relay server
+    let relay_handle: JoinHandle<anyhow::Result<()>> = {
         let st = shutdown_token.clone();
         let ss = shutdown_scope.clone();
-        async move {
-            let ret = task.run(st).await;
-            drop(ss);
+        tokio::spawn(async move {
+            let ret = relay_server.run(st).await;
+            drop(ss); // Signal task completion
             ret
-        }
-    });
+        })
+    };
+
+    // Spawn the monitor server
+    let monitor_handle: JoinHandle<anyhow::Result<()>> = {
+        let st = shutdown_token.clone();
+        let ss = shutdown_scope.clone();
+        tokio::spawn(async move {
+            let ret = monitor_server.run(st).await;
+            drop(ss); // Signal task completion
+            ret
+        })
+    };
+
+    // Combine the task handles for easier management
+    let handles = vec![relay_handle, monitor_handle];
 
     // Running section on operational taskes and shutdown signal
     tokio::select! {

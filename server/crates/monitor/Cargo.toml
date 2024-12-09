@@ -8,3 +8,7 @@ repository.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+primitives.workspace = true
+tokio.workspace = true
+tokio-postgres.workspace = true
+chrono.workspace = true
