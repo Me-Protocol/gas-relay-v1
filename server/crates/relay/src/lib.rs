@@ -49,7 +49,7 @@ pub async fn run_relayer_server(
 
     let app = Router::new()
         .route("/", get(|| async { "Gasless Relayer." }))
-        .route("/status", get(handlers::get_request_status))
+        .route("/status/:request_id", get(handlers::get_request_status))
         .route("/relay", post(handlers::relay_request))
         .route("/batch-relay", post(handlers::relay_request))
         .layer(cors)
