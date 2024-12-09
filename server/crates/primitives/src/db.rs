@@ -2,7 +2,6 @@ use crate::relay::{RequestState, RequestStatus};
 use chrono::NaiveDateTime;
 use postgres::NoTls;
 
-
 const DB_VERSION: &str = "2";
 
 pub async fn create_db_instance(url: &String) -> Result<tokio_postgres::Client, anyhow::Error> {
@@ -104,7 +103,8 @@ pub async fn final_update_request_status(
     gas_used: u64,
     transaction_hash: String,
 ) -> Result<(), anyhow::Error> {
-    let query = format!("
+    let query = format!(
+        "
         UPDATE request_status_{DB_VERSION}
         SET request_state = $1, 
             block_number = $2, 
@@ -112,7 +112,8 @@ pub async fn final_update_request_status(
             gas_used = $4, 
             transaction_hash = $5
         WHERE request_id = $6;
-    ");
+    "
+    );
     let request_state: String = request_state.into();
 
     client
@@ -136,7 +137,8 @@ pub async fn query_request_status_by_request_id(
     client: &tokio_postgres::Client,
     request_id: String,
 ) -> Result<Option<RequestStatus>, anyhow::Error> {
-    let query = format!("
+    let query = format!(
+        "
         SELECT 
             chain_id, 
             request_id, 
@@ -149,7 +151,8 @@ pub async fn query_request_status_by_request_id(
             batch
         FROM request_status_{DB_VERSION}
         WHERE request_id = $1
-    ");
+    "
+    );
 
     let row = client.query_opt(&query, &[&request_id]).await?;
 
@@ -176,7 +179,8 @@ pub async fn query_all_request_status_paginated(
     page_number: i64,
     page_size: i64,
 ) -> Result<Vec<RequestStatus>, anyhow::Error> {
-    let query = format!("
+    let query = format!(
+        "
         SELECT 
             chain_id, 
             request_id, 
@@ -190,7 +194,8 @@ pub async fn query_all_request_status_paginated(
         FROM request_status_{DB_VERSION}
         ORDER BY created_at DESC
         LIMIT $1 OFFSET $2
-    ");
+    "
+    );
 
     let offset = (page_number - 1) * page_size;
 

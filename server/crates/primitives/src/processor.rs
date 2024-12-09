@@ -143,7 +143,8 @@ impl Processor {
         >,
     > {
         let rand_private_key: PrivateKeySigner = self.chains_config[chain_index]
-            .accounts_private_keys.get_current_key()
+            .accounts_private_keys
+            .get_current_key()
             .parse()
             .unwrap();
         let wallet = EthereumWallet::from(rand_private_key.clone());

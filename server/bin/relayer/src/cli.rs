@@ -28,7 +28,12 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
     // server config
     let server_config = config.clone().server;
     let db_url = server_config.db_url.clone();
-    let chains_config = config.clone().chains.iter().map(|chain| chain.to_config()).collect();
+    let chains_config = config
+        .clone()
+        .chains
+        .iter()
+        .map(|chain| chain.to_config())
+        .collect();
     let processor = Processor::new(chains_config);
 
     let (pending_tx_sender, pending_tx_recv) = mpsc::channel::<PendingRequest>(100);

@@ -45,7 +45,9 @@ pub async fn relay_request(
 
     // shot a request to the process (this is where the chain interaction takes place)
     let pending_tx = state
-        .processor.lock().await
+        .processor
+        .lock()
+        .await
         .process_request(relay_request.into_data(), request_id, 0)
         .await;
 
@@ -83,7 +85,9 @@ pub async fn batch_relay_request(
 
     // shot a request to the process (this is where the chain interaction takes place)
     let pending_tx = state
-        .processor.lock().await
+        .processor
+        .lock()
+        .await
         .process_batch_request(
             requests,
             relay_requests.refund_receiver.clone(),

@@ -10,7 +10,10 @@ use primitives::{
     processor::Processor,
 };
 use std::sync::Arc;
-use tokio::{net::TcpListener, sync::{mpsc::Sender, Mutex}};
+use tokio::{
+    net::TcpListener,
+    sync::{mpsc::Sender, Mutex},
+};
 use tower_http::cors::{Any, CorsLayer};
 pub mod error;
 pub mod handlers;
