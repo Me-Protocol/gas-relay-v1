@@ -69,7 +69,7 @@ pub async fn batch_relay_request(
         relay_requests.requests[0].chain_id,
         request_id.clone(),
         RequestState::Pending,
-        false,
+        true,
     )
     .await
     .unwrap();

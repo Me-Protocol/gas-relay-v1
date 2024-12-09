@@ -1,7 +1,6 @@
 use primitives::{
     configs::PendingRequest,
     db::{create_db_instance, final_update_request_status},
-    processor::Processor,
     relay::RequestState,
 };
 use tokio::sync::mpsc::Receiver;
