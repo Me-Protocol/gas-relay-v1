@@ -23,7 +23,7 @@ pub async fn get_request_status(
 ) -> Result<Json<Option<RequestStatus>>, RelayServerError> {
     let request_status = query_request_status_by_request_id(&state.db_client, request_id)
         .await
-        .unwrap();
+        .map_err(|_| RelayServerError::RequestNotFound)?;
 
     Ok(Json(request_status))
 }
@@ -34,7 +34,9 @@ pub async fn relay_request(
 ) -> Result<Json<RequestStatus>, RelayServerError> {
     // Validate access key
     if relay_request.access_key != state.access_key {
-        return Err(RelayServerError::BadRequest("Invalid access key".to_string()));
+        return Err(RelayServerError::BadRequest(
+            "Invalid access key".to_string(),
+        ));
     }
 
     // Generate request ID
@@ -49,7 +51,9 @@ pub async fn relay_request(
         false,
     )
     .await
-    .map_err(|e| RelayServerError::DatabaseError(format!("Failed to insert initial request status: {:?}", e)))?;
+    .map_err(|e| {
+        RelayServerError::DatabaseError(format!("Failed to insert initial request status: {:?}", e))
+    })?;
 
     // Attempt to process the request
     let pending_tx = state
@@ -57,14 +61,13 @@ pub async fn relay_request(
         .lock()
         .await
         .process_request(relay_request.into_data(), request_id.clone(), 0)
-        .await;
+        .await
+        .map_err(|e| RelayServerError::ProcessingError(e))?;
 
     // Attempt to send the pending transaction over the channel
-    state
-        .mpsc_sender
-        .send(pending_tx)
-        .await
-        .map_err(|e| RelayServerError::ChannelError(format!("Failed to send transaction: {:?}", e)))?;
+    state.mpsc_sender.send(pending_tx).await.map_err(|e| {
+        RelayServerError::ChannelError(format!("Failed to send transaction: {:?}", e))
+    })?;
 
     Ok(Json(request_status))
 }
@@ -92,7 +95,12 @@ pub async fn batch_relay_request(
         true,
     )
     .await
-    .map_err(|e| RelayServerError::DatabaseError(format!("Failed to insert initial batch request status: {:?}", e)))?;
+    .map_err(|e| {
+        RelayServerError::DatabaseError(format!(
+            "Failed to insert initial batch request status: {:?}",
+            e
+        ))
+    })?;
 
     // Collect requests into appropriate format
     let requests: Vec<_> = relay_requests
@@ -112,14 +120,13 @@ pub async fn batch_relay_request(
             0,
             request_id.clone(),
         )
-        .await;
+        .await
+        .map_err(|e| RelayServerError::ProcessingError(e))?;
 
     // Attempt to send the pending transaction over the channel
-    state
-        .mpsc_sender
-        .send(pending_tx)
-        .await
-        .map_err(|e| RelayServerError::ChannelError(format!("Failed to send batch transaction: {:?}", e)))?;
+    state.mpsc_sender.send(pending_tx).await.map_err(|e| {
+        RelayServerError::ChannelError(format!("Failed to send batch transaction: {:?}", e))
+    })?;
 
     Ok(Json(request_status))
 }

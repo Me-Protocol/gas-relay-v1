@@ -63,15 +63,18 @@ impl Processor {
         request: ForwardRequestData,
         request_id: String,
         chain_index: usize,
-    ) -> PendingRequest {
+    ) -> Result<PendingRequest, String> {
         let trusted_forwarder_contract = self.get_trusted_forwarder(chain_index);
         let req = trusted_forwarder_contract.execute(request.into());
-        let pending_tx = req.send().await.unwrap();
+        let pending_tx = req
+            .send()
+            .await
+            .map_err(|e| format!("Processor Error: {:?}", e))?;
 
-        PendingRequest {
+        Ok(PendingRequest {
             request_id,
             tx_pending: pending_tx,
-        }
+        })
     }
 
     /// This is function would be responsible for processing a batch of requests
@@ -90,7 +93,7 @@ impl Processor {
         refund_receiver: String,
         chain_index: usize,
         request_id: String,
-    ) -> PendingRequest {
+    ) -> Result<PendingRequest, String> {
         let trusted_forwarder_contract = self.get_trusted_forwarder(chain_index);
         let request = request
             .iter()
@@ -98,12 +101,15 @@ impl Processor {
             .collect();
         let req = trusted_forwarder_contract
             .executeBatch(request, Address::from_str(&refund_receiver).unwrap());
-        let pending_tx = req.send().await.unwrap();
+        let pending_tx = req
+            .send()
+            .await
+            .map_err(|e| format!("Processor Error: {:?}", e))?;
 
-        PendingRequest {
+        Ok(PendingRequest {
             request_id,
             tx_pending: pending_tx,
-        }
+        })
     }
 
     /// This function would be responsible for waiting for the transaction to be mined
@@ -153,7 +159,8 @@ impl Processor {
             .on_http(self.chains_config[chain_index].rpc_url.parse().unwrap());
 
         TrustedForwarderContract::new(
-            Address::from_str(&self.chains_config[chain_index].trusted_forwarder).unwrap(),
+            Address::from_str(&self.chains_config[chain_index].trusted_forwarder)
+                .expect("Invalid Address from config"),
             provider,
         )
     }
