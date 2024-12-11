@@ -21,6 +21,8 @@ pub struct ServerConfig {
     pub server_url: String,
     /// This is the URL of the database
     pub db_url: String,
+    /// This is a key that would be used to post to the relay service
+    pub access_key: String
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -78,7 +80,7 @@ impl ChainsConfig {
         rpc_url: String,
         chain_id: u64,
         accounts_private_keys: RelayerAccounts,
-        trusted_forwarder: String,
+        trusted_forwarder: String
     ) -> Self {
         Self {
             name,
@@ -114,7 +116,7 @@ impl ChainsConfigParseable {
             self.rpc_url.clone(),
             self.chain_id,
             RelayerAccounts::new(self.accounts_private_keys.clone()),
-            self.trusted_forwarder.clone(),
+            self.trusted_forwarder.clone()
         )
     }
 }

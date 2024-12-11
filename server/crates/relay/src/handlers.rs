@@ -32,7 +32,15 @@ pub async fn relay_request(
     State(state): State<Arc<AppState>>,
     Json(relay_request): Json<RelayRequest>,
 ) -> Result<Json<RequestStatus>, RelayServerError> {
+    // Validate access key
+    if relay_request.access_key != state.access_key {
+        return Err(RelayServerError::BadRequest("Invalid access key".to_string()));
+    }
+
+    // Generate request ID
     let request_id = generate_request_id();
+
+    // Attempt to insert initial request status
     let request_status = inital_insert_request_status(
         &state.db_client,
         relay_request.chain_id,
@@ -41,18 +49,22 @@ pub async fn relay_request(
         false,
     )
     .await
-    .unwrap();
+    .map_err(|e| RelayServerError::DatabaseError(format!("Failed to insert initial request status: {:?}", e)))?;
 
-    // shot a request to the process (this is where the chain interaction takes place)
+    // Attempt to process the request
     let pending_tx = state
         .processor
         .lock()
         .await
-        .process_request(relay_request.into_data(), request_id, 0)
+        .process_request(relay_request.into_data(), request_id.clone(), 0)
         .await;
 
-    // broad cast a message via the chanel to monitor tx and update db... this would be async (would not be waiting for the response)
-    state.mpsc_sender.send(pending_tx).await.unwrap();
+    // Attempt to send the pending transaction over the channel
+    state
+        .mpsc_sender
+        .send(pending_tx)
+        .await
+        .map_err(|e| RelayServerError::ChannelError(format!("Failed to send transaction: {:?}", e)))?;
 
     Ok(Json(request_status))
 }
@@ -61,12 +73,17 @@ pub async fn batch_relay_request(
     State(state): State<Arc<AppState>>,
     Json(relay_requests): Json<BatchRelayRequestParams>,
 ) -> Result<Json<RequestStatus>, RelayServerError> {
+    // Validate that the batch request is not empty
     if relay_requests.requests.is_empty() {
         return Err(RelayServerError::BadRequest(
             "Empty batch request".to_string(),
         ));
     }
+
+    // Generate request ID
     let request_id = generate_request_id();
+
+    // Attempt to insert initial batch request status
     let request_status = inital_insert_request_status(
         &state.db_client,
         relay_requests.requests[0].chain_id,
@@ -75,15 +92,16 @@ pub async fn batch_relay_request(
         true,
     )
     .await
-    .unwrap();
+    .map_err(|e| RelayServerError::DatabaseError(format!("Failed to insert initial batch request status: {:?}", e)))?;
 
-    let requests = relay_requests
+    // Collect requests into appropriate format
+    let requests: Vec<_> = relay_requests
         .requests
         .iter()
         .map(|r| r.into_data())
         .collect();
 
-    // shot a request to the process (this is where the chain interaction takes place)
+    // Attempt to process the batch request
     let pending_tx = state
         .processor
         .lock()
@@ -92,11 +110,16 @@ pub async fn batch_relay_request(
             requests,
             relay_requests.refund_receiver.clone(),
             0,
-            request_id,
+            request_id.clone(),
         )
         .await;
-    // broad cast a message via the chanel to monitor tx and update db... this would be async (would not be waiting for the response)
-    state.mpsc_sender.send(pending_tx).await.unwrap();
+
+    // Attempt to send the pending transaction over the channel
+    state
+        .mpsc_sender
+        .send(pending_tx)
+        .await
+        .map_err(|e| RelayServerError::ChannelError(format!("Failed to send batch transaction: {:?}", e)))?;
 
     Ok(Json(request_status))
 }

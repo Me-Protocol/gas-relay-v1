@@ -116,7 +116,6 @@ impl Processor {
         &self,
         pending_tx: PendingTransactionBuilder<Http<Client>, Ethereum>,
     ) -> FixedBytes<32> {
-        // TODO: add configuration for the number of blocks to wait for
         let tx_hash = pending_tx.watch().await.unwrap();
         tx_hash
     }

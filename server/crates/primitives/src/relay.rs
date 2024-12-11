@@ -25,6 +25,7 @@ pub struct RelayRequest {
     pub data: String,
     pub nonce: u64,
     pub signature: String,
+    pub access_key: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

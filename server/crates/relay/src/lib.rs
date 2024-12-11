@@ -19,12 +19,14 @@ pub mod error;
 pub mod handlers;
 
 pub struct AppState {
-    // this is the database client, servering as the postgres connection pool
+    /// this is the database client, servering as the postgres connection pool
     pub db_client: tokio_postgres::Client,
-    // this is the blockchain processor
+    /// this is the blockchain processor
     pub processor: Mutex<Processor>,
-    // this mpsc sender
+    /// this mpsc sender
     pub mpsc_sender: Sender<PendingRequest>,
+    /// this is the access key for the server
+    pub access_key: String,
 }
 
 /// Run the relayer server
@@ -44,10 +46,11 @@ pub async fn run_relayer_server(
     // create table if not exists
     create_request_status_table(&db_client).await?;
 
-    let mut app_state = Arc::new(AppState {
+    let app_state = Arc::new(AppState {
         db_client,
         processor: Mutex::new(processor),
         mpsc_sender,
+        access_key: config.access_key.clone(),
     });
 
     let app = Router::new()
