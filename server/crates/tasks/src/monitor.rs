@@ -3,7 +3,7 @@ use crate::Task;
 use anyhow::bail;
 use async_trait::async_trait;
 use monitor::run_monitor_task;
-use primitives::{configs::PendingRequest, processor::Processor};
+use primitives::configs::PendingRequest;
 use tokio::{select, sync::mpsc::Receiver, try_join};
 use tokio_util::sync::CancellationToken;
 use tracing::info;
