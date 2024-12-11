@@ -1,5 +1,5 @@
 {
-  "name": "@ts-sdk/plate",
+  "name": "@developeruche/gas-relay-sdk",
   "version": "0.0.1",
   "description": "This is a typescript SDK plate",
   "main": "dist/index",

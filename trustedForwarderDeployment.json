@@ -1,0 +1,12 @@
+{
+    "mainnets": {
+        "name": "ERC2771Forwarder",
+        "create2 salt": "0xdeadbeefbaddc0de1234babe8765feedfacec0ffee1337c0ffeecafeeaffeedc",
+        "address": "0x"
+    },
+    "testnets": {
+        "name": "ERC2771Forwarder",
+        "create2 salt": "0xdeadbeefbaddc0de4321babe8765feedfacec0ffee1337c0ffeecafeeaffeedc",
+        "address": "0x"
+    }
+}

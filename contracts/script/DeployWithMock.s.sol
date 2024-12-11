@@ -3,6 +3,7 @@ pragma solidity ^0.8.13;
 
 import {Script, console} from "forge-std/Script.sol";
 import {TrustedForwarder} from "../src/TrustedForwarder.sol";
+import {MockContract} from "../src/MockContract.sol";
 
 contract DeployScript is Script {
     uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
@@ -10,14 +11,15 @@ contract DeployScript is Script {
 
 
     TrustedForwarder public trustedForwarder;
+    MockContract public mockContract;
 
     function setUp() public {}
 
     function run() public {
         vm.startBroadcast(deployerPrivateKey);
-        
-        bytes32 salt = bytes32(0xdeadbeefbaddc0de1234babe8765feedfacec0ffee1337c0ffeecafeeaffeedc);
-        trustedForwarder = new TrustedForwarder{salt: salt}("ERC2771Forwarder");
+
+        trustedForwarder = new TrustedForwarder("ERC2771Forwarder");
+        mockContract = new MockContract(address(trustedForwarder));
 
         vm.stopBroadcast();
     }

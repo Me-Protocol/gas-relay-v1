@@ -1,4 +1,4 @@
-import { RelayRequest, RelayRequestNoSignature } from './types'
+import { RelayRequest, RelayRequestNoSignature, RelayRequestSerialized } from './types'
 import axios from 'axios'
 import { ethers } from 'ethers'
 import { trustedForwarderContract as tfc } from './contracts'
@@ -23,7 +23,8 @@ export async function prepRequest(
   data: string,
   trustedForwardAddress: string,
   trustedFowarderName: string,
-  chainId: bigint
+  chainId: bigint,
+  access_key: string
 ): Promise<RelayRequest> {
   const trustedForwardContract = tfc(trustedForwardAddress, signer)
   const nonce = await trustedForwardContract.nonces(await signer.getAddress())
@@ -43,7 +44,7 @@ export async function prepRequest(
   const domain = await getDomain(trustedFowarderName, chainId, trustedForwardAddress)
   const signature = await signer.signTypedData(domain, { ForwardRequest: ForwardRequestType }, request)
 
-  return { ...request, signature, chain_id: chainId }
+  return { ...request, signature, chain_id: chainId, access_key }
 }
 
 /**
@@ -54,7 +55,7 @@ export async function prepRequest(
  * @returns A Promise resolving to the response from the relay server or `null` in case of an error.
  */
 export async function gaslessRelay(request: RelayRequest, relayUrl: string) {
-  const requestSerialized = {
+  const requestSerialized: RelayRequestSerialized = {
     chain_id: Number(request.chain_id),
     from: request.from,
     to: request.to,
@@ -64,6 +65,7 @@ export async function gaslessRelay(request: RelayRequest, relayUrl: string) {
     data: request.data,
     nonce: Number(request.nonce),
     signature: request.signature,
+    access_key: request.access_key,
   }
 
   try {
@@ -80,7 +82,6 @@ export async function gaslessRelay(request: RelayRequest, relayUrl: string) {
  *
  * @note This function is under development and may have issues with nonce, signature, and deadline synchronization.
  * @note This batch funtion still has a problem, if one of the requests fails, it would be skipped and no useful error message would be returned.
- *
  * @param requests - An array of `RelayRequest` objects to be sent.
  * @param payableAccount - Address to receive refunds from the relay server.
  * @param relayUrl - The URL of the relay server.

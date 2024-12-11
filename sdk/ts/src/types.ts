@@ -11,6 +11,7 @@ export interface RelayRequest {
   data: string // Encoded transaction data (e.g., a function call or payload).
   nonce: bigint // Unique nonce for preventing replay attacks.
   signature: string // The digital signature of the request, signed by the sender.
+  access_key: string // The access key for the relay server.
 }
 
 /**
@@ -51,4 +52,5 @@ export interface RelayRequestSerialized {
   data: string // Encoded transaction data (e.g., a function call or payload).
   nonce: number // Unique nonce for preventing replay attacks.
   signature: string // The digital signature of the request, signed by the sender.
+  access_key: string // The access key for the relay server.
 }
