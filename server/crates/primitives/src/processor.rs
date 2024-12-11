@@ -59,19 +59,22 @@ impl Processor {
     /// - `request` - The request to be processed
     /// - `chain` - The chain to which the request would be sent
     pub async fn process_request(
-        &self,
+        &mut self,
         request: ForwardRequestData,
         request_id: String,
         chain_index: usize,
-    ) -> PendingRequest {
+    ) -> Result<PendingRequest, String> {
         let trusted_forwarder_contract = self.get_trusted_forwarder(chain_index);
         let req = trusted_forwarder_contract.execute(request.into());
-        let pending_tx = req.send().await.unwrap();
+        let pending_tx = req
+            .send()
+            .await
+            .map_err(|e| format!("Processor Error: {:?}", e))?;
 
-        PendingRequest {
+        Ok(PendingRequest {
             request_id,
             tx_pending: pending_tx,
-        }
+        })
     }
 
     /// This is function would be responsible for processing a batch of requests
@@ -85,12 +88,12 @@ impl Processor {
     /// - `chain` - The chain to which the requests would be sent
     /// - `request_id` - The id of the request
     pub async fn process_batch_request(
-        &self,
+        &mut self,
         request: Vec<ForwardRequestData>,
         refund_receiver: String,
         chain_index: usize,
         request_id: String,
-    ) -> PendingRequest {
+    ) -> Result<PendingRequest, String> {
         let trusted_forwarder_contract = self.get_trusted_forwarder(chain_index);
         let request = request
             .iter()
@@ -98,12 +101,15 @@ impl Processor {
             .collect();
         let req = trusted_forwarder_contract
             .executeBatch(request, Address::from_str(&refund_receiver).unwrap());
-        let pending_tx = req.send().await.unwrap();
+        let pending_tx = req
+            .send()
+            .await
+            .map_err(|e| format!("Processor Error: {:?}", e))?;
 
-        PendingRequest {
+        Ok(PendingRequest {
             request_id,
             tx_pending: pending_tx,
-        }
+        })
     }
 
     /// This function would be responsible for waiting for the transaction to be mined
@@ -116,13 +122,12 @@ impl Processor {
         &self,
         pending_tx: PendingTransactionBuilder<Http<Client>, Ethereum>,
     ) -> FixedBytes<32> {
-        // TODO: add configuration for the number of blocks to wait for
         let tx_hash = pending_tx.watch().await.unwrap();
         tx_hash
     }
 
     pub fn get_trusted_forwarder(
-        &self,
+        &mut self,
         chain_index: usize,
     ) -> TrustedForwarderContractInstance<
         Http<Client>,
@@ -143,8 +148,8 @@ impl Processor {
         >,
     > {
         let rand_private_key: PrivateKeySigner = self.chains_config[chain_index]
-            .accounts_private_keys[0]
-            .clone()
+            .accounts_private_keys
+            .get_current_key()
             .parse()
             .unwrap();
         let wallet = EthereumWallet::from(rand_private_key.clone());
@@ -154,7 +159,8 @@ impl Processor {
             .on_http(self.chains_config[chain_index].rpc_url.parse().unwrap());
 
         TrustedForwarderContract::new(
-            Address::from_str(&self.chains_config[chain_index].trusted_forwarder).unwrap(),
+            Address::from_str(&self.chains_config[chain_index].trusted_forwarder)
+                .expect("Invalid Address from config"),
             provider,
         )
     }
@@ -193,7 +199,7 @@ impl From<&ForwardRequestData> for ERC2771Forwarder::ForwardRequestData {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::configs::ChainsConfig;
+    use crate::configs::{ChainsConfig, RelayerAccounts};
     use alloy::{
         network::EthereumWallet,
         node_bindings::Anvil,
@@ -234,11 +240,11 @@ mod tests {
             name: Some("Ethereum Dev Network".to_string()),
             rpc_url: http_rpc_url,
             chain_id: anvil.chain_id(),
-            accounts_private_keys: vec![signer.to_bytes().to_string()],
+            accounts_private_keys: RelayerAccounts::new(vec![alice.to_string()]),
             trusted_forwarder: tf_instance.address().to_string(),
         };
 
-        let processor = Processor::new(vec![chains_config]);
+        let mut processor = Processor::new(vec![chains_config]);
 
         let forward_request = ForwardRequestData {
             from: signer_alice.address(),

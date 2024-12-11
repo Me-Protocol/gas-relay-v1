@@ -25,6 +25,7 @@ pub struct RelayRequest {
     pub data: String,
     pub nonce: u64,
     pub signature: String,
+    pub access_key: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -73,14 +74,14 @@ pub fn generate_request_id() -> String {
 impl RelayRequest {
     pub fn into_data(&self) -> ForwardRequestData {
         ForwardRequestData {
-            from: Address::from_str(&self.from).unwrap(),
-            to: Address::from_str(&self.to).unwrap(),
+            from: Address::from_str(&self.from).expect("infallible"),
+            to: Address::from_str(&self.to).expect("infallible"),
             value: U256::from(self.value),
             gas: U256::from(self.gas),
             deadline: U48::from(self.deadline),
-            data: Bytes::from_str(&self.data).unwrap(),
+            data: Bytes::from_str(&self.data).expect("infallible"),
             nonce: U256::from(self.nonce),
-            signature: Bytes::from_str(&self.signature).unwrap(),
+            signature: Bytes::from_str(&self.signature).expect("infallible"),
         }
     }
 }

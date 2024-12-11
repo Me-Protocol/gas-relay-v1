@@ -47,7 +47,7 @@ impl Task for ServerTask {
                     }
                 }
                 _ = shutdown_token.cancelled() => {
-                    info!("Shutting dozwn relay server");
+                    info!("Shutting down relay server");
                 }
             }
         });
