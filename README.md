@@ -6,17 +6,17 @@
 A secure and efficient Gas Relay implementation based on the ERC-2771 specification. This software enables meta-transactions by receiving signed requests from Transaction Signers, covering gas costs, and relaying transactions to a Trusted Forwarder.
 
 
-### Motivation
+## Motivation
 Meta-transactions provide an elegant solution to this problem by allowing third parties to sponsor transaction costs on behalf of users. This shifts the gas payment burden from users to the service providers, enabling a more user-friendly and accessible dApp experience.
 
 Despite the promise of meta-transactions, implementing them securely and efficiently remains a challenge for developers. Without a standardized approach, the risk of fragmented solutions, duplicated efforts, and potential security vulnerabilities increases.
 
 
-### Chain Support
+## Chain Support
 Gas relay is built to interface with any EVM compatiable chain, it is all about a change in the config of the `Relay` server. It is important to not that all trusted forwarder across chain are deployed to that same address using `create2`.
 These contract ar **not upgradeable**.
 
-### Architecture
+## Architecture
 **Components**
 1.	Gas Relay
     - Handles incoming signed requests.
