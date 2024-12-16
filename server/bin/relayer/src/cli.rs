@@ -36,7 +36,8 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
         .collect();
     let processor = Processor::new(chains_config);
 
-    let (pending_tx_sender, pending_tx_recv) = mpsc::channel::<PendingRequest>(100);
+    let (pending_tx_sender, pending_tx_recv) =
+        mpsc::channel::<PendingRequest>(config.mpsc_channel_size);
 
     tracing::info!("Starting Relay with config: {:?}", config.clone());
 
