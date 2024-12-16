@@ -61,6 +61,8 @@ pub struct RelayerConfig {
     pub chains: Vec<ChainsConfigParseable>,
     /// Server config
     pub server: ServerConfig,
+    /// This is the MPSC channel size
+    pub mpsc_channel_size: usize,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

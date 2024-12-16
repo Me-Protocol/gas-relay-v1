@@ -9,7 +9,7 @@ pub mod monitor;
 pub mod relay;
 
 /// Core task trait implemenated by top level gasless-relayer tasks.
-#[async_trait] // to fix: the trait `Task` cannot be made into an object consider moving `run` to another trait
+#[async_trait]
 pub trait Task: Sync + Send + 'static {
     async fn run(self: Box<Self>, shutdown_token: CancellationToken) -> anyhow::Result<()>;
 }
