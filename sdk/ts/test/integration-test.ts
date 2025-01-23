@@ -1,14 +1,14 @@
 import { batchedGaslessRelay, gaslessRelay, prepRequest } from '../src/relay'
 import { ethers } from 'ethers'
 
-const RELAYER_TEST_CONTRACT_ADDRESS = "0x5ff93753aaa767F6C65e2314d0Cd6A1a129eDCce";
+const RELAYER_TEST_CONTRACT_ADDRESS = "0xF119D4E7A0F6651901d52Db7322e9C89C61D5AF0";
 const DATA_FOR_TEST_CONTRACT = "0x82ab890a00000000000000000000000000000000000000000000000000000000000001f7";
 const DATA_FOR_TEST_CONTRACT_WITH_ERROR = "0xe736a0940000000000000000000000000000000000000000000000000000000000000017";
 const TRUSTED_FOWARDER = "0x2B3673aD2104b8E282F56a9f8a70cb45Ac11E97f";
 
 
 async function just_relayer() {
-    let provider = new ethers.JsonRpcProvider('http://127.0.0.1:8545/');
+    let provider = new ethers.JsonRpcProvider('https://gateway.tenderly.co/public/sepolia');
     let signer = new ethers.Wallet('0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider); // this account those not have to gas payment token
 
     let prepared_request = await prepRequest(
@@ -27,7 +27,7 @@ async function just_relayer() {
 }
 
 async function relayer_with_error() {
-    let provider = new ethers.JsonRpcProvider('http://127.0.0.1:8545/');
+    let provider = new ethers.JsonRpcProvider('https://gateway.tenderly.co/public/sepolia');
     let signer = new ethers.Wallet('0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', provider); // this account those not have to gas payment token
 
     let prepared_request = await prepRequest(
@@ -49,3 +49,6 @@ async function main() {
     await just_relayer();
     // await relayer_with_error();
 }
+
+
+main().then().catch(console.error)
