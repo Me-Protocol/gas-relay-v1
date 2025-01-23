@@ -5,7 +5,10 @@ use axum::{
     Json,
 };
 use primitives::{
-    db::{inital_insert_request_status, query_request_status_by_request_id},
+    db::{
+        final_update_request_status, inital_insert_request_status,
+        query_request_status_by_request_id,
+    },
     relay::{generate_request_id, RelayRequest, RequestState, RequestStatus},
 };
 use serde::{Deserialize, Serialize};
@@ -55,19 +58,34 @@ pub async fn relay_request(
         RelayServerError::DatabaseError(format!("Failed to insert initial request status: {:?}", e))
     })?;
 
-    // Attempt to process the request
-    let pending_tx = state
-        .processor
-        .lock()
-        .await
-        .process_request(relay_request.into_data(), request_id.clone(), 0)
-        .await
-        .map_err(|e| RelayServerError::ProcessingError(e))?;
+    // Attempt to process the request (as a background task)
+    tokio::spawn(async move {
+        let processing_result = state
+            .processor
+            .lock()
+            .await
+            .process_request(relay_request.into_data(), request_id.clone(), 0)
+            .await;
 
-    // Attempt to send the pending transaction over the channel
-    state.mpsc_sender.send(pending_tx).await.map_err(|e| {
-        RelayServerError::ChannelError(format!("Failed to send transaction: {:?}", e))
-    })?;
+        if let Ok(pending_tx) = processing_result {
+            // Attempt to send the pending transaction over the channel
+            if let Err(e) = state.mpsc_sender.send(pending_tx).await {
+                eprintln!("Failed to send transaction: {:?}", e);
+            }
+        } else if let Err(e) = processing_result {
+            final_update_request_status(
+                &state.db_client,
+                request_id,
+                RequestState::Failed,
+                0,
+                chrono::Utc::now().naive_utc(),
+                0 as u64,
+                e.to_string(),
+            )
+            .await
+            .unwrap();
+        }
+    });
 
     Ok(Json(request_status))
 }
