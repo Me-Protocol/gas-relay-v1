@@ -1,27 +1,22 @@
-# Stage 1: Build
+# Stage 1: Builder
 FROM rust:latest as builder
 
-WORKDIR /usr/src/relayer
+WORKDIR /usr/src/server
 
-RUN cd server
-COPY Cargo.toml Cargo.lock ./
-COPY bin/ bin/
-COPY crates/ crates/
+COPY server/ ./
 
+RUN mkdir -p src && echo "fn main() { println!(\"Dummy\"); }" > src/main.rs
 
-# Create a dummy main.rs to build the dependencies
-RUN mkdir src && echo "fn main() { println!(\"Dummy\"); }" > src/main.rs
-
-# Build the project to cache dependencies
 RUN cargo build --release
+
 RUN rm src/main.rs
 
-# Build the final binary
 RUN cargo build --release --workspace
 
-# Stage 2: Run
+# Stage 2: Runtime
 FROM debian:bookworm-slim
 
+# Install only the libraries needed at runtime
 RUN apt-get update && apt-get install -y \
     libssl3 \
     ca-certificates \
@@ -29,8 +24,8 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /usr/src/server
 
-COPY --from=builder /usr/src/relayer/target/release/relayer ./relayer
-
-CMD ["./relayer"]
+COPY --from=builder /usr/src/server/target/release/relayer ./relayer
 
 EXPOSE 8080
+
+CMD ["./relayer"]
