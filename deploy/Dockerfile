@@ -28,4 +28,4 @@ COPY --from=builder /usr/src/server/target/release/relayer ./relayer
 
 EXPOSE 8080
 
-CMD ["./relayer"]
+CMD ["./relayer --config-path ./.config.toml"]
