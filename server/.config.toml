@@ -1,0 +1,19 @@
+name = "gas-relay"
+mpsc_channel_size = 5000
+[server]
+db_url = "host=localhost user=postgres"
+# db_url ="host=xxxx.amazonaws.com port=5432 user=postgres password=xxxx dbname=postgres sslmode=disable" # production-sample
+server_url = "0.0.0.0:8010"
+access_key = "0x4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356"
+[[chains]]
+name = "sepolia"
+rpc_url = "https://ethereum-sepolia-rpc.publicnode.com"
+chain_id = 11155111
+accounts_private_keys = ["0x9c4d7dbd3c73f0cdc6ccaca392ba30bf1d2611ecae58847ea9283d2ac7077a84", "0xbbed5161cff03b895f6ca63f7ea62a61fcd430c3a305b00292fafbde07fafc59", "0x06345b78232613ea1f88e347b5b51b14bf9f97f81d564510864db78bb85ec9db", "0x557e9b26bd31e457dfc8da3f14bcef23f4a327f2d0741dcc87be3a7f3f3ae6a0", "0x8bd5ea8e53a3fb274179f6cd0dcce7b5423539be57bf4f40f133377e600fc5de", "0x795b0d7bdfced0a04ca5b08178b62472daa73cb5675f1d989c8bbe164bda3b8b", "0xa019c1611efc764e4734af26b976173973fcdf27b7a55c56cf27fe75e8e0d1d6", "0xeec9d2ff7f567e3e39dda1eeecd59e86a9c22f33046ecc1c4ef28cd38d54564c", "0x9c613d77fb7b5a125f5fe7ed6a0ba2b24a6f967787bf29fa527614d15a249321", "0x03c9a0b5a10cae3da0409a405a0dc8ee1ccf321fde298bb71403da550b6fdbfd"]
+trusted_forwarder = "0x2B3673aD2104b8E282F56a9f8a70cb45Ac11E97f"
+[[chains]]
+name = "base-sepolia"
+rpc_url = "https://sepolia.base.org"
+chain_id = 84532
+accounts_private_keys = ["0x9c4d7dbd3c73f0cdc6ccaca392ba30bf1d2611ecae58847ea9283d2ac7077a84", "0xbbed5161cff03b895f6ca63f7ea62a61fcd430c3a305b00292fafbde07fafc59", "0x06345b78232613ea1f88e347b5b51b14bf9f97f81d564510864db78bb85ec9db", "0x557e9b26bd31e457dfc8da3f14bcef23f4a327f2d0741dcc87be3a7f3f3ae6a0", "0x8bd5ea8e53a3fb274179f6cd0dcce7b5423539be57bf4f40f133377e600fc5de", "0x795b0d7bdfced0a04ca5b08178b62472daa73cb5675f1d989c8bbe164bda3b8b", "0xa019c1611efc764e4734af26b976173973fcdf27b7a55c56cf27fe75e8e0d1d6", "0xeec9d2ff7f567e3e39dda1eeecd59e86a9c22f33046ecc1c4ef28cd38d54564c", "0x9c613d77fb7b5a125f5fe7ed6a0ba2b24a6f967787bf29fa527614d15a249321", "0x03c9a0b5a10cae3da0409a405a0dc8ee1ccf321fde298bb71403da550b6fdbfd"]
+trusted_forwarder = "0x2B3673aD2104b8E282F56a9f8a70cb45Ac11E97f"
