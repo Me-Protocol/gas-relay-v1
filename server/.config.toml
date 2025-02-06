@@ -1,7 +1,7 @@
 name = "gas-relay"
 mpsc_channel_size = 5000
 [server]
-db_url = "host=me-relayer-dev-db.cvymmslhkf1p.us-east-1.rds.amazonaws.com port=5432 user=postgres password=3a8pCSQn7CJWQC8ru1Vg dbname=postgres"
+db_url = "host=me-relayer-dev-db.cvymmslhkf1p.us-east-1.rds.amazonaws.com port=5432 user=postgres password=3a8pCSQn7CJWQC8ru1Vg dbname=postgres sslmode=require"
 # db_url ="host=xxxx.amazonaws.com port=5432 user=postgres password=xxxx dbname=postgres sslmode=disable" # production-sample
 server_url = "0.0.0.0:8010"
 access_key = "0x4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356"
